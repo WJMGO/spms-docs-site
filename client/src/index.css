@@ -175,3 +175,55 @@
     }
   }
 }
+/* Prose styling for documentation */
+.prose {
+  @apply text-foreground;
+}
+
+.prose h1 {
+  @apply text-3xl font-bold mb-6 text-foreground;
+}
+
+.prose h2 {
+  @apply text-2xl font-bold mt-8 mb-4 text-foreground;
+}
+
+.prose h3 {
+  @apply text-xl font-semibold mt-6 mb-3 text-foreground;
+}
+
+.prose p {
+  @apply mb-4 leading-relaxed text-foreground;
+}
+
+.prose ul, .prose ol {
+  @apply mb-4 ml-6;
+}
+
+.prose li {
+  @apply mb-2 text-foreground;
+}
+
+.prose table {
+  @apply w-full border-collapse my-6;
+}
+
+.prose th {
+  @apply bg-secondary text-secondary-foreground font-semibold p-3 text-left border border-border;
+}
+
+.prose td {
+  @apply p-3 border border-border text-foreground;
+}
+
+.prose code {
+  @apply bg-secondary text-secondary-foreground px-2 py-1 rounded font-mono text-sm;
+}
+
+.prose blockquote {
+  @apply border-l-4 border-primary pl-4 py-2 my-4 bg-secondary/50 italic text-foreground;
+}
+
+.prose mark {
+  @apply bg-yellow-200 text-yellow-900 px-1 rounded;
+}
