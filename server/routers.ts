@@ -1,5 +1,6 @@
 import { router, publicProcedure, protectedProcedure } from './trpc';
 import { assessmentRouter } from './routers/assessment';
+import { reportsRouter } from './routers/reports';
 import { z } from 'zod';
 import { getDb, users, employees, departments, positions } from './db';
 import { eq } from 'drizzle-orm';
@@ -327,6 +328,7 @@ export const appRouter = router({
   departments: departmentsRouter,
   positions: positionsRouter,
   assessment: assessmentRouter,
+  reports: reportsRouter,
 });
 
 export type AppRouter = typeof appRouter;
