@@ -151,7 +151,7 @@ export const assessmentTemplates = mysqlTable(
     name: varchar('name', { length: 255 }).notNull(),
     description: text('description'),
     type: varchar('type', { length: 50 }).notNull(),
-    totalScore: decimal('total_score', { precision: 5, scale: 2 }).default('100'),
+    totalScore: decimal('total_score', { precision: 5, scale: 2 }).default('150'),
     status: varchar('status', { length: 50 }).default('active'),
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
@@ -212,8 +212,9 @@ export const assessmentPeriods = mysqlTable(
 );
 
 /**
- * 绩效评分表
- * 存储员工的绩效评分记录
+ * 绩效评分表（主表）
+ * 存储员工的绩效评分记录，包含 6 个维度的总分
+ * 维度：日常工作(100分)、工作质量(15分)、个人目标(15分)、部门互评(5分)、绩效加分(15分)、绩效减分
  */
 export const performanceAssessments = mysqlTable(
   'performance_assessments',
@@ -224,7 +225,20 @@ export const performanceAssessments = mysqlTable(
     templateId: varchar('template_id', { length: 36 }).notNull(),
     evaluatorId: varchar('evaluator_id', { length: 36 }).notNull(),
     status: varchar('status', { length: 50 }).default('draft'),
+    
+    // 6 个维度的分数
+    dailyWorkScore: decimal('daily_work_score', { precision: 5, scale: 2 }).default('0'),
+    workQualityScore: decimal('work_quality_score', { precision: 5, scale: 2 }).default('0'),
+    personalGoalScore: decimal('personal_goal_score', { precision: 5, scale: 2 }).default('0'),
+    departmentReviewScore: decimal('department_review_score', { precision: 5, scale: 2 }).default('0'),
+    bonusScore: decimal('bonus_score', { precision: 5, scale: 2 }).default('0'),
+    penaltyScore: decimal('penalty_score', { precision: 5, scale: 2 }).default('0'),
+    
+    // 总分和排名
     totalScore: decimal('total_score', { precision: 5, scale: 2 }),
+    rank: int('rank'),
+    
+    // 备注和审批信息
     comments: text('comments'),
     submittedAt: timestamp('submitted_at'),
     approvedAt: timestamp('approved_at'),
@@ -265,8 +279,242 @@ export const performanceAssessments = mysqlTable(
 );
 
 /**
+ * 工作质量详情表
+ * 存储工作质量维度的详细评分
+ */
+export const workQualityDetails = mysqlTable(
+  'work_quality_details',
+  {
+    id: varchar('id', { length: 36 }).primaryKey(),
+    assessmentId: varchar('assessment_id', { length: 36 }).notNull().unique(),
+    
+    // 代码走查
+    codeReviewCount: int('code_review_count').default(0),
+    codeReviewScore: decimal('code_review_score', { precision: 5, scale: 2 }).default('0'),
+    
+    // 代码审核
+    codeAuditCount: int('code_audit_count').default(0),
+    codeAuditScore: decimal('code_audit_score', { precision: 5, scale: 2 }).default('0'),
+    
+    // Bug 打回率
+    bugReturnRate: decimal('bug_return_rate', { precision: 5, scale: 2 }).default('0'),
+    bugReturnRateScore: decimal('bug_return_rate_score', { precision: 5, scale: 2 }).default('0'),
+    
+    // 个人 Bug 有效打回
+    personalBugCount: int('personal_bug_count').default(0),
+    personalBugScore: decimal('personal_bug_score', { precision: 5, scale: 2 }).default('0'),
+    
+    // 超期问题部门达成
+    overdueProblemsAchieved: boolean('overdue_problems_achieved').default(false),
+    overdueProblemsScore: decimal('overdue_problems_score', { precision: 5, scale: 2 }).default('0'),
+    
+    // 设计评审
+    designReviewCount: int('design_review_count').default(0),
+    designReviewScore: decimal('design_review_score', { precision: 5, scale: 2 }).default('0'),
+    
+    // 总分
+    totalScore: decimal('total_score', { precision: 5, scale: 2 }).default('0'),
+    
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+  },
+  (table) => ({
+    assessmentIdFk: foreignKey({
+      columns: [table.assessmentId],
+      foreignColumns: [performanceAssessments.id],
+    }),
+    assessmentIdIdx: index('idx_work_quality_assessment').on(table.assessmentId),
+  })
+);
+
+/**
+ * 个人目标详情表
+ * 存储个人目标维度的详细评分
+ */
+export const personalGoalDetails = mysqlTable(
+  'personal_goal_details',
+  {
+    id: varchar('id', { length: 36 }).primaryKey(),
+    assessmentId: varchar('assessment_id', { length: 36 }).notNull().unique(),
+    
+    // 关键指标（0-7分）
+    keyIndicatorScore: decimal('key_indicator_score', { precision: 5, scale: 2 }).default('0'),
+    sprintCompletionRate: decimal('sprint_completion_rate', { precision: 5, scale: 2 }).default('0'),
+    milestonAchievementRate: decimal('milestone_achievement_rate', { precision: 5, scale: 2 }).default('0'),
+    
+    // 关键事项（0-8分）
+    keyMatterScore: decimal('key_matter_score', { precision: 5, scale: 2 }).default('0'),
+    keyMatterDescription: text('key_matter_description'),
+    keyMatterCompletionRate: decimal('key_matter_completion_rate', { precision: 5, scale: 2 }).default('0'),
+    
+    // 总分
+    totalScore: decimal('total_score', { precision: 5, scale: 2 }).default('0'),
+    
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+  },
+  (table) => ({
+    assessmentIdFk: foreignKey({
+      columns: [table.assessmentId],
+      foreignColumns: [performanceAssessments.id],
+    }),
+    assessmentIdIdx: index('idx_personal_goal_assessment').on(table.assessmentId),
+  })
+);
+
+/**
+ * 部门互评详情表
+ * 存储部门互评维度的详细评分
+ */
+export const departmentReviewDetails = mysqlTable(
+  'department_review_details',
+  {
+    id: varchar('id', { length: 36 }).primaryKey(),
+    assessmentId: varchar('assessment_id', { length: 36 }).notNull().unique(),
+    
+    // 团队交付（按时、质量等维度）
+    teamDeliveryScore: decimal('team_delivery_score', { precision: 5, scale: 2 }).default('0'),
+    
+    // 团队协作（问题解答、技术协助等）
+    teamCollaborationScore: decimal('team_collaboration_score', { precision: 5, scale: 2 }).default('0'),
+    
+    // 态度和反馈
+    attitudeScore: decimal('attitude_score', { precision: 5, scale: 2 }).default('0'),
+    
+    // 排名百分比（前20%=5分，前50%=3分，后30%=1分）
+    rankPercentile: decimal('rank_percentile', { precision: 5, scale: 2 }).default('0'),
+    
+    // 总分
+    totalScore: decimal('total_score', { precision: 5, scale: 2 }).default('0'),
+    
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+  },
+  (table) => ({
+    assessmentIdFk: foreignKey({
+      columns: [table.assessmentId],
+      foreignColumns: [performanceAssessments.id],
+    }),
+    assessmentIdIdx: index('idx_department_review_assessment').on(table.assessmentId),
+  })
+);
+
+/**
+ * 绩效加分详情表
+ * 存储绩效加分维度的详细评分
+ */
+export const bonusDetails = mysqlTable(
+  'bonus_details',
+  {
+    id: varchar('id', { length: 36 }).primaryKey(),
+    assessmentId: varchar('assessment_id', { length: 36 }).notNull().unique(),
+    
+    // 培养新人（0-3分）
+    newPersonTrainingScore: decimal('new_person_training_score', { precision: 5, scale: 2 }).default('0'),
+    newPersonCount: int('new_person_count').default(0),
+    newPersonMonth: int('new_person_month').default(0),
+    
+    // 分享目标（0-4分）
+    sharingScore: decimal('sharing_score', { precision: 5, scale: 2 }).default('0'),
+    sharingCount: int('sharing_count').default(0),
+    
+    // 专利目标（0-6分）
+    patentScore: decimal('patent_score', { precision: 5, scale: 2 }).default('0'),
+    patentProposalPassed: int('patent_proposal_passed').default(0),
+    patentFilingPassed: int('patent_filing_passed').default(0),
+    
+    // 文档目标（0-2分）
+    documentScore: decimal('document_score', { precision: 5, scale: 2 }).default('0'),
+    documentCount: int('document_count').default(0),
+    
+    // 微创新（0-3分）
+    innovationScore: decimal('innovation_score', { precision: 5, scale: 2 }).default('0'),
+    innovationDescription: text('innovation_description'),
+    
+    // 团队氛围（0-2分）
+    teamAtmosphereScore: decimal('team_atmosphere_score', { precision: 5, scale: 2 }).default('0'),
+    teamAtmosphereCount: int('team_atmosphere_count').default(0),
+    
+    // 招聘面试（0-3分）
+    recruitmentScore: decimal('recruitment_score', { precision: 5, scale: 2 }).default('0'),
+    recruitmentCount: int('recruitment_count').default(0),
+    
+    // 表扬（相关方）
+    praiseScore: decimal('praise_score', { precision: 5, scale: 2 }).default('0'),
+    informalPraiseCount: int('informal_praise_count').default(0),
+    formalPraisePersonal: int('formal_praise_personal').default(0),
+    formalPraiseTeam: int('formal_praise_team').default(0),
+    
+    // 其他（项目 PL）
+    plScore: decimal('pl_score', { precision: 5, scale: 2 }).default('0'),
+    plType: varchar('pl_type', { length: 50 }),
+    
+    // 总分
+    totalScore: decimal('total_score', { precision: 5, scale: 2 }).default('0'),
+    
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+  },
+  (table) => ({
+    assessmentIdFk: foreignKey({
+      columns: [table.assessmentId],
+      foreignColumns: [performanceAssessments.id],
+    }),
+    assessmentIdIdx: index('idx_bonus_assessment').on(table.assessmentId),
+  })
+);
+
+/**
+ * 绩效减分详情表
+ * 存储绩效减分维度的详细评分
+ */
+export const penaltyDetails = mysqlTable(
+  'penalty_details',
+  {
+    id: varchar('id', { length: 36 }).primaryKey(),
+    assessmentId: varchar('assessment_id', { length: 36 }).notNull().unique(),
+    
+    // 技术失误 / 管理失误
+    technicalErrorAmount: decimal('technical_error_amount', { precision: 10, scale: 2 }).default('0'),
+    technicalErrorSeverity: varchar('technical_error_severity', { length: 50 }),
+    technicalErrorScore: decimal('technical_error_score', { precision: 5, scale: 2 }).default('0'),
+    
+    // 低级失误
+    lowErrorAmount: decimal('low_error_amount', { precision: 10, scale: 2 }).default('0'),
+    lowErrorSeverity: varchar('low_error_severity', { length: 50 }),
+    lowErrorScore: decimal('low_error_score', { precision: 5, scale: 2 }).default('0'),
+    
+    // 质量异常
+    softwareTestingAnomalyCount: int('software_testing_anomaly_count').default(0),
+    softwareTestingAnomalyScore: decimal('software_testing_anomaly_score', { precision: 5, scale: 2 }).default('0'),
+    
+    jenkinsCompileErrorCount: int('jenkins_compile_error_count').default(0),
+    jenkinsCompileErrorScore: decimal('jenkins_compile_error_score', { precision: 5, scale: 2 }).default('0'),
+    
+    codeReviewAnomalyCount: int('code_review_anomaly_count').default(0),
+    codeReviewAnomalyScore: decimal('code_review_anomaly_score', { precision: 5, scale: 2 }).default('0'),
+    
+    // 总分
+    totalScore: decimal('total_score', { precision: 5, scale: 2 }).default('0'),
+    
+    // 是否清零（当月清0）
+    isCleared: boolean('is_cleared').default(false),
+    
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+  },
+  (table) => ({
+    assessmentIdFk: foreignKey({
+      columns: [table.assessmentId],
+      foreignColumns: [performanceAssessments.id],
+    }),
+    assessmentIdIdx: index('idx_penalty_assessment').on(table.assessmentId),
+  })
+);
+
+/**
  * 评分分数表
- * 存储每个评分项的具体分数
+ * 存储每个评分项的具体分数（用于兼容旧的评分项系统）
  */
 export const assessmentScores = mysqlTable(
   'assessment_scores',
@@ -570,6 +818,61 @@ export const performanceAssessmentsRelations = relations(performanceAssessments,
     references: [users.id],
   }),
   scores: many(assessmentScores),
+  workQualityDetails: one(workQualityDetails, {
+    fields: [performanceAssessments.id],
+    references: [workQualityDetails.assessmentId],
+  }),
+  personalGoalDetails: one(personalGoalDetails, {
+    fields: [performanceAssessments.id],
+    references: [personalGoalDetails.assessmentId],
+  }),
+  departmentReviewDetails: one(departmentReviewDetails, {
+    fields: [performanceAssessments.id],
+    references: [departmentReviewDetails.assessmentId],
+  }),
+  bonusDetails: one(bonusDetails, {
+    fields: [performanceAssessments.id],
+    references: [bonusDetails.assessmentId],
+  }),
+  penaltyDetails: one(penaltyDetails, {
+    fields: [performanceAssessments.id],
+    references: [penaltyDetails.assessmentId],
+  }),
+}));
+
+export const workQualityDetailsRelations = relations(workQualityDetails, ({ one }) => ({
+  assessment: one(performanceAssessments, {
+    fields: [workQualityDetails.assessmentId],
+    references: [performanceAssessments.id],
+  }),
+}));
+
+export const personalGoalDetailsRelations = relations(personalGoalDetails, ({ one }) => ({
+  assessment: one(performanceAssessments, {
+    fields: [personalGoalDetails.assessmentId],
+    references: [performanceAssessments.id],
+  }),
+}));
+
+export const departmentReviewDetailsRelations = relations(departmentReviewDetails, ({ one }) => ({
+  assessment: one(performanceAssessments, {
+    fields: [departmentReviewDetails.assessmentId],
+    references: [performanceAssessments.id],
+  }),
+}));
+
+export const bonusDetailsRelations = relations(bonusDetails, ({ one }) => ({
+  assessment: one(performanceAssessments, {
+    fields: [bonusDetails.assessmentId],
+    references: [performanceAssessments.id],
+  }),
+}));
+
+export const penaltyDetailsRelations = relations(penaltyDetails, ({ one }) => ({
+  assessment: one(performanceAssessments, {
+    fields: [penaltyDetails.assessmentId],
+    references: [performanceAssessments.id],
+  }),
 }));
 
 export const assessmentScoresRelations = relations(assessmentScores, ({ one }) => ({
