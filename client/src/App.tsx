@@ -4,8 +4,11 @@ import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { TRPCProvider } from "./components/TRPCProvider";
 import Dashboard from "./pages/Dashboard";
 import ManagementDashboard from "./pages/ManagementDashboard";
+import AnalyticsPage from "./pages/AnalyticsPage";
+import ReportsPage from "./pages/ReportsPage";
 
 
 function Router() {
@@ -13,6 +16,8 @@ function Router() {
     <Switch>
       <Route path={"/"} component={Dashboard} />
       <Route path={"/management"} component={ManagementDashboard} />
+      <Route path={"/analytics"} component={AnalyticsPage} />
+      <Route path={"/reports"} component={ReportsPage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
@@ -33,7 +38,9 @@ function App() {
         // switchable
       >
         <TooltipProvider>
-          <Router />
+          <TRPCProvider>
+            <Router />
+          </TRPCProvider>
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>

@@ -1,6 +1,6 @@
 import { router, protectedProcedure, adminProcedure } from '../trpc';
 import { z } from 'zod';
-import { getDb, performanceAssessments, employees, departments, assessmentScores, assessmentItems, assessmentTemplates } from '../db';
+import { getDb, performanceAssessments, employees, departments, assessmentScores, assessmentItems, assessmentTemplates, workQualityDetails, personalGoalDetails, departmentReviewDetails, bonusDetails, penaltyDetails } from '../db';
 import { eq, and, gte, lte, desc } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -462,9 +462,320 @@ const generationRouter = router({
 });
 
 /**
+ * 六维度分析路由
+ */
+const dimensionAnalysisRouter = router({
+  /**
+   * 获取六维度分布统计
+   */
+  getDimensionDistribution: protectedProcedure
+    .input(
+      z.object({
+        periodId: z.string().optional(),
+        departmentId: z.string().optional(),
+      })
+    )
+    .query(async ({ input }) => {
+      const db = await getDb();
+
+      let where: any = {};
+      if (input.periodId) {
+        where.periodId = input.periodId;
+      }
+
+      const assessments = await db.query.performanceAssessments.findMany({
+        where: eq(performanceAssessments.status, 'approved'),
+      });
+
+      // 按部门筛选
+      if (input.departmentId) {
+        const deptEmployees = await db.query.employees.findMany({
+          where: eq(employees.departmentId, input.departmentId),
+        });
+        const employeeIds = deptEmployees.map((e: any) => e.id);
+        const filteredAssessments = assessments.filter((a: any) => employeeIds.includes(a.employeeId));
+
+        // 计算各维度分布
+        const distribution = calculateDimensionDistribution(filteredAssessments);
+        return distribution;
+      }
+
+      // 计算各维度分布
+      const distribution = calculateDimensionDistribution(assessments);
+      return distribution;
+    }),
+
+  /**
+   * 获取部门对标分析
+   */
+  getDepartmentComparison: protectedProcedure
+    .input(
+      z.object({
+        periodId: z.string().optional(),
+      })
+    )
+    .query(async ({ input }) => {
+      const db = await getDb();
+
+      // 获取所有部门
+      const allDepartments = await db.query.departments.findMany();
+      const comparisonData = await Promise.all(
+        allDepartments.map(async (dept: any) => {
+          // 获取部门员工
+          const deptEmployees = await db.query.employees.findMany({
+            where: eq(employees.departmentId, dept.id),
+          });
+
+          const employeeIds = deptEmployees.map((e: any) => e.id);
+
+          // 获取部门评分
+          const assessments = await db.query.performanceAssessments.findMany({
+            where: and(
+              eq(performanceAssessments.status, 'approved'),
+              ...(input.periodId ? [eq(performanceAssessments.periodId, input.periodId)] : [])
+            ),
+          });
+
+          const deptAssessments = assessments.filter((a: any) => employeeIds.includes(a.employeeId));
+
+          // 计算部门平均分
+          const totalScore = deptAssessments.reduce((sum: number, a: any) => sum + (a.totalScore ? parseFloat(a.totalScore) : 0), 0);
+          const averageScore = deptAssessments.length > 0 ? (totalScore / deptAssessments.length).toFixed(2) : '0';
+
+          // 计算各维度平均分
+          const dimensions = {
+            dailyWork: 0,
+            workQuality: 0,
+            personalGoal: 0,
+            departmentReview: 0,
+            bonus: 0,
+            penalty: 0,
+          };
+
+          if (deptAssessments.length > 0) {
+            dimensions.dailyWork = deptAssessments.reduce((sum: number, a: any) => sum + (a.dailyWorkScore ? parseFloat(a.dailyWorkScore) : 0), 0) / deptAssessments.length;
+            dimensions.workQuality = deptAssessments.reduce((sum: number, a: any) => sum + (a.workQualityScore ? parseFloat(a.workQualityScore) : 0), 0) / deptAssessments.length;
+            dimensions.personalGoal = deptAssessments.reduce((sum: number, a: any) => sum + (a.personalGoalScore ? parseFloat(a.personalGoalScore) : 0), 0) / deptAssessments.length;
+            dimensions.departmentReview = deptAssessments.reduce((sum: number, a: any) => sum + (a.departmentReviewScore ? parseFloat(a.departmentReviewScore) : 0), 0) / deptAssessments.length;
+            dimensions.bonus = deptAssessments.reduce((sum: number, a: any) => sum + (a.bonusScore ? parseFloat(a.bonusScore) : 0), 0) / deptAssessments.length;
+            dimensions.penalty = deptAssessments.reduce((sum: number, a: any) => sum + (a.penaltyScore ? parseFloat(a.penaltyScore) : 0), 0) / deptAssessments.length;
+          }
+
+          return {
+            departmentId: dept.id,
+            departmentName: dept.name,
+            totalEmployees: deptEmployees.length,
+            totalAssessments: deptAssessments.length,
+            averageScore: parseFloat(averageScore as string),
+            dimensions,
+          };
+        })
+      );
+
+      return comparisonData;
+    }),
+
+  /**
+   * 获取员工详细维度得分
+   */
+  getEmployeeDimensionScores: protectedProcedure
+    .input(
+      z.object({
+        employeeId: z.string(),
+        periodId: z.string().optional(),
+      })
+    )
+    .query(async ({ input }) => {
+      const db = await getDb();
+
+      let where: any = [
+        eq(employees.id, input.employeeId),
+        eq(performanceAssessments.status, 'approved'),
+      ];
+
+      if (input.periodId) {
+        where.push(eq(performanceAssessments.periodId, input.periodId));
+      }
+
+      const assessment = await db.query.performanceAssessments.findFirst({
+        where: and(...where),
+        with: {
+          employee: {
+            with: {
+              user: true,
+              department: true,
+              position: true,
+            },
+          },
+        },
+      });
+
+      if (!assessment) {
+        throw new Error('Assessment not found');
+      }
+
+      return {
+        employeeName: assessment.employee?.user?.name,
+        departmentName: assessment.employee?.department?.name,
+        positionName: assessment.employee?.position?.name,
+        totalScore: assessment.totalScore ? parseFloat(assessment.totalScore) : 0,
+        dimensions: {
+          dailyWork: assessment.dailyWorkScore ? parseFloat(assessment.dailyWorkScore) : 0,
+          workQuality: assessment.workQualityScore ? parseFloat(assessment.workQualityScore) : 0,
+          personalGoal: assessment.personalGoalScore ? parseFloat(assessment.personalGoalScore) : 0,
+          departmentReview: assessment.departmentReviewScore ? parseFloat(assessment.departmentReviewScore) : 0,
+          bonus: assessment.bonusScore ? parseFloat(assessment.bonusScore) : 0,
+          penalty: assessment.penaltyScore ? parseFloat(assessment.penaltyScore) : 0,
+        },
+      };
+    }),
+
+  /**
+   * 导出数据为 Excel
+   */
+  exportAsExcel: protectedProcedure
+    .input(
+      z.object({
+        periodId: z.string(),
+        type: z.enum(['all', 'department', 'employee']),
+        departmentId: z.string().optional(),
+        format: z.enum(['xlsx', 'csv']).default('xlsx'),
+      })
+    )
+    .query(async ({ input }) => {
+      const db = await getDb();
+
+      let assessments: any[] = [];
+
+      if (input.type === 'all') {
+        assessments = await db.query.performanceAssessments.findMany({
+          where: eq(performanceAssessments.periodId, input.periodId),
+          with: {
+            employee: {
+              with: {
+                user: true,
+                department: true,
+                position: true,
+              },
+            },
+          },
+        });
+      } else if (input.type === 'department' && input.departmentId) {
+        const deptEmployees = await db.query.employees.findMany({
+          where: eq(employees.departmentId, input.departmentId),
+        });
+
+        const employeeIds = deptEmployees.map((e: any) => e.id);
+
+        assessments = await db.query.performanceAssessments.findMany({
+          where: and(
+            eq(performanceAssessments.periodId, input.periodId),
+            eq(performanceAssessments.status, 'approved')
+          ),
+          with: {
+            employee: {
+              with: {
+                user: true,
+                department: true,
+                position: true,
+              },
+            },
+          },
+        });
+
+        assessments = assessments.filter((a: any) => employeeIds.includes(a.employeeId));
+      }
+
+      // 生成数据
+      const exportData = assessments.map((a: any) => ({
+        '员工姓名': a.employee?.user?.name || '',
+        '部门': a.employee?.department?.name || '',
+        '职位': a.employee?.position?.name || '',
+        '总分': a.totalScore || '',
+        '日常工作': a.dailyWorkScore || '',
+        '工作质量': a.workQualityScore || '',
+        '个人目标': a.personalGoalScore || '',
+        '部门互评': a.departmentReviewScore || '',
+        '绩效加分': a.bonusScore || '',
+        '绩效减分': a.penaltyScore || '',
+        '状态': a.status || '',
+        '提交时间': a.submittedAt ? new Date(a.submittedAt).toLocaleString() : '',
+      }));
+
+      return {
+        filename: `performance-report-${input.periodId}-${new Date().getTime()}.${input.format}`,
+        data: exportData,
+        format: input.format,
+      };
+    }),
+});
+
+// 辅助函数：计算维度分布
+function calculateDimensionDistribution(assessments: any[]) {
+  const dimensionRanges = {
+    dailyWork: { excellent: 0, good: 0, fair: 0, pass: 0, fail: 0 },
+    workQuality: { excellent: 0, good: 0, fair: 0, pass: 0, fail: 0 },
+    personalGoal: { excellent: 0, good: 0, fair: 0, pass: 0, fail: 0 },
+    departmentReview: { excellent: 0, good: 0, fair: 0, pass: 0, fail: 0 },
+    bonus: { excellent: 0, good: 0, fair: 0, pass: 0, fail: 0 },
+    penalty: { excellent: 0, good: 0, fair: 0, pass: 0, fail: 0 },
+  };
+
+  assessments.forEach((assessment) => {
+    // 日常工作（0-100分）
+    const dailyWorkScore = assessment.dailyWorkScore ? parseFloat(assessment.dailyWorkScore) : 0;
+    updateDimensionRange(dimensionRanges.dailyWork, dailyWorkScore, 100);
+
+    // 工作质量（0-15分）
+    const workQualityScore = assessment.workQualityScore ? parseFloat(assessment.workQualityScore) : 0;
+    updateDimensionRange(dimensionRanges.workQuality, workQualityScore, 15);
+
+    // 个人目标（0-15分）
+    const personalGoalScore = assessment.personalGoalScore ? parseFloat(assessment.personalGoalScore) : 0;
+    updateDimensionRange(dimensionRanges.personalGoal, personalGoalScore, 15);
+
+    // 部门互评（0-5分）
+    const departmentReviewScore = assessment.departmentReviewScore ? parseFloat(assessment.departmentReviewScore) : 0;
+    updateDimensionRange(dimensionRanges.departmentReview, departmentReviewScore, 5);
+
+    // 绩效加分（0-15分）
+    const bonusScore = assessment.bonusScore ? parseFloat(assessment.bonusScore) : 0;
+    updateDimensionRange(dimensionRanges.bonus, bonusScore, 15);
+
+    // 绩效减分（0分或负分）
+    const penaltyScore = assessment.penaltyScore ? parseFloat(assessment.penaltyScore) : 0;
+    if (penaltyScore >= 0) {
+      dimensionRanges.penalty.excellent++;
+    } else {
+      dimensionRanges.penalty.fail++;
+    }
+  });
+
+  return dimensionRanges;
+}
+
+// 辅助函数：更新维度范围
+function updateDimensionRange(range: any, score: number, maxScore: number) {
+  const percentage = (score / maxScore) * 100;
+
+  if (percentage >= 90) {
+    range.excellent++;
+  } else if (percentage >= 80) {
+    range.good++;
+  } else if (percentage >= 70) {
+    range.fair++;
+  } else if (percentage >= 60) {
+    range.pass++;
+  } else {
+    range.fail++;
+  }
+}
+
+/**
  * 导出报表路由
  */
 export const reportsRouter = router({
   stats: statsRouter,
   generation: generationRouter,
+  dimensions: dimensionAnalysisRouter,
 });
