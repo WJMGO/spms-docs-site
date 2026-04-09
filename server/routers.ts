@@ -4,6 +4,7 @@ import { reportsRouter } from './routers/reports';
 import { dashboardRouter } from './routers/dashboard';
 import { performanceRouter } from './routers/performance';
 import { analyticsRouter } from './routers/analytics';
+import { managementRouter } from './routers/management';
 import { z } from 'zod';
 import { getDb, users, employees, departments, positions } from './db';
 import { eq } from 'drizzle-orm';
@@ -332,6 +333,7 @@ export const appRouter = router({
   dashboard: dashboardRouter,
   performance: performanceRouter,
   analytics: analyticsRouter,
+  management: managementRouter,
 });
 
 export type AppRouter = typeof appRouter;
