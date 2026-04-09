@@ -3,7 +3,7 @@
  * 支持真实的 6 个维度评分
  */
 
-import { router, protectedProcedure, adminProcedure } from '../_core/trpc';
+import { router, protectedProcedure, adminProcedure } from '../trpc';
 import { z } from 'zod';
 import { getDb, performanceAssessments, workQualityDetails, personalGoalDetails, departmentReviewDetails, bonusDetails, penaltyDetails, employees } from '../db';
 import { eq } from 'drizzle-orm';
@@ -19,6 +19,56 @@ import {
   calculateRankPercentile,
 } from '../performance-calculator';
 
+// 定义输入类型
+const workQualityInput = z.object({
+  assessmentId: z.string(),
+  codeReviewCount: z.number().default(0),
+  codeAuditCount: z.number().default(0),
+  codeAuditErrorCount: z.number().default(0),
+  bugReturnRate: z.number().default(0),
+  personalBugCount: z.number().default(0),
+  overdueProblemsAchieved: z.boolean().default(false),
+  designReviewCount: z.number().default(0),
+});
+
+const personalGoalInput = z.object({
+  assessmentId: z.string(),
+  sprintCompletionRate: z.number().default(0),
+  milestonAchievementRate: z.number().default(0),
+  keyMatterScore: z.number().default(0),
+  keyMatterDescription: z.string().optional(),
+  completionRate: z.number().default(0),
+});
+
+const departmentReviewInput = z.object({
+  assessmentId: z.string(),
+  teamDeliveryScore: z.number().default(0),
+  teamCollaborationScore: z.number().default(0),
+  attitudeScore: z.number().default(0),
+});
+
+const bonusInput = z.object({
+  assessmentId: z.string(),
+  newPersonTrainingScore: z.number().default(0),
+  sharingScore: z.number().default(0),
+  patentScore: z.number().default(0),
+  documentScore: z.number().default(0),
+  innovationScore: z.number().default(0),
+  teamAtmosphereScore: z.number().default(0),
+  recruitmentScore: z.number().default(0),
+  praiseScore: z.number().default(0),
+  plScore: z.number().default(0),
+});
+
+const penaltyInput = z.object({
+  assessmentId: z.string(),
+  technicalErrorAmount: z.number().default(0),
+  lowErrorAmount: z.number().default(0),
+  softwareTestingAnomalyCount: z.number().default(0),
+  jenkinsCompileErrorCount: z.number().default(0),
+  codeReviewAnomalyCount: z.number().default(0),
+});
+
 /**
  * 工作质量评分路由
  */
@@ -27,18 +77,7 @@ const workQualityRouter = router({
    * 保存工作质量评分详情
    */
   save: protectedProcedure
-    .input(
-      z.object({
-        assessmentId: z.string(),
-        codeReviewCount: z.number().default(0),
-        codeAuditCount: z.number().default(0),
-        codeAuditErrorCount: z.number().default(0),
-        bugReturnRate: z.number().default(0),
-        personalBugCount: z.number().default(0),
-        overdueProblemsAchieved: z.boolean().default(false),
-        designReviewCount: z.number().default(0),
-      })
-    )
+    .input(workQualityInput)
     .mutation(async ({ input }) => {
       const db = await getDb();
 
@@ -131,16 +170,7 @@ const personalGoalRouter = router({
    * 保存个人目标评分详情
    */
   save: protectedProcedure
-    .input(
-      z.object({
-        assessmentId: z.string(),
-        sprintCompletionRate: z.number().default(0),
-        milestonAchievementRate: z.number().default(0),
-        keyMatterScore: z.number().default(0),
-        keyMatterDescription: z.string().optional(),
-        completionRate: z.number().default(0),
-      })
-    )
+    .input(personalGoalInput)
     .mutation(async ({ input }) => {
       const db = await getDb();
 
@@ -217,14 +247,7 @@ const departmentReviewRouter = router({
    * 保存部门互评评分详情
    */
   save: protectedProcedure
-    .input(
-      z.object({
-        assessmentId: z.string(),
-        teamDeliveryScore: z.number().default(0),
-        teamCollaborationScore: z.number().default(0),
-        attitudeScore: z.number().default(0),
-      })
-    )
+    .input(departmentReviewInput)
     .mutation(async ({ input }) => {
       const db = await getDb();
 
@@ -297,20 +320,7 @@ const bonusRouter = router({
    * 保存绩效加分详情
    */
   save: protectedProcedure
-    .input(
-      z.object({
-        assessmentId: z.string(),
-        newPersonTrainingScore: z.number().default(0),
-        sharingScore: z.number().default(0),
-        patentScore: z.number().default(0),
-        documentScore: z.number().default(0),
-        innovationScore: z.number().default(0),
-        teamAtmosphereScore: z.number().default(0),
-        recruitmentScore: z.number().default(0),
-        praiseScore: z.number().default(0),
-        plScore: z.number().default(0),
-      })
-    )
+    .input(bonusInput)
     .mutation(async ({ input }) => {
       const db = await getDb();
 
@@ -400,16 +410,7 @@ const penaltyRouter = router({
    * 保存绩效减分详情
    */
   save: protectedProcedure
-    .input(
-      z.object({
-        assessmentId: z.string(),
-        technicalErrorAmount: z.number().default(0),
-        lowErrorAmount: z.number().default(0),
-        softwareTestingAnomalyCount: z.number().default(0),
-        jenkinsCompileErrorCount: z.number().default(0),
-        codeReviewAnomalyCount: z.number().default(0),
-      })
-    )
+    .input(penaltyInput)
     .mutation(async ({ input }) => {
       const db = await getDb();
 
