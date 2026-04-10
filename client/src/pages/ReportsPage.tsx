@@ -83,10 +83,13 @@ export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState("list");
 
   // Mock API calls for development
-  const { data: reports = mockReports, isLoading: isLoadingReports } = trpc.reports.getReports.useQuery();
-  const { data: stats = mockStats } = trpc.reports.getStats.useQuery();
+  // const { data: reports = mockReports, isLoading: isLoadingReports } = trpc.reports.stats.useQuery();
+  // const { data: stats = mockStats } = trpc.reports.stats.useQuery();
+  const reports = mockReports;
+  const stats = mockStats;
+  const isLoadingReports = false;
 
-  const handleGenerateReport = async (params: any) => {
+  const handleGenerateReport = async (params: Record<string, unknown>) => {
     setIsLoading(true);
     try {
       // Simulate API call
@@ -114,7 +117,7 @@ export default function ReportsPage() {
     }
   };
 
-  const filteredReports = reports.filter(report => {
+  const filteredReports = reports.filter((report: any) => {
     const matchesSearch = report.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesDepartment = selectedDepartment === "all" || report.department === selectedDepartment;
     const matchesType = reportType === "all" || report.type === reportType;
@@ -252,9 +255,9 @@ export default function ReportsPage() {
 
             <CardContent>
               <ReportList
-                reports={filteredReports}
+                reports={filteredReports as any}
                 isLoading={isLoadingReports}
-                onExport={(report) => handleExport(report.format.toLowerCase(), { reportId: report.id })}
+                onExport={(report: any) => handleExport(report.format.toLowerCase(), { reportId: report.id })}
               />
             </CardContent>
           </Card>

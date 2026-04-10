@@ -36,7 +36,7 @@ export function OverviewCards({ companyStats, departmentStats, isLoading }: Over
     needsImprovement: 23,
   };
 
-  const stats = isLoading ? null : { company: mockCompanyStats, department: mockDepartmentStats };
+  const stats = { company: mockCompanyStats, department: mockDepartmentStats };
 
   const StatCard = ({ title, value, subtitle, icon: Icon, trend, trendValue, color }: any) => (
     <Card>

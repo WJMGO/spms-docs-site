@@ -20,7 +20,6 @@ import {
   ComposedChart,
   Area,
   AreaChart,
-  ScatterPlot,
   Scatter
 } from "recharts";
 import {
@@ -390,7 +389,7 @@ export function DepartmentComparison({ departmentComparison, isLoading }: Depart
                       className="flex-1 h-6 rounded"
                       style={{
                         backgroundColor: getPerformanceColor(level),
-                        width: `${(dept[level as keyof typeof dept] / (dept.优秀 + dept.良好 + dept.合格 + dept.待改进)) * 100}%`,
+                        width: `${((dept[level as keyof typeof dept] as number) / ((dept.优秀 as number) + (dept.良好 as number) + (dept.合格 as number) + (dept.待改进 as number))) * 100}%`,
                         minWidth: "20px"
                       }}
                     >

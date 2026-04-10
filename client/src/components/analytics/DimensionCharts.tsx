@@ -21,7 +21,7 @@ import {
 import {
   PieChart as PieChartIcon,
   BarChart3,
-  Radar,
+  Radar as RadarIcon,
   Target,
   TrendingUp,
   Users,
@@ -241,7 +241,7 @@ export function DimensionCharts({ dimensionData, isLoading }: DimensionChartsPro
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Radar className="h-5 w-5" />
+              <RadarIcon className="h-5 w-5" />
               维度能力雷达图
             </CardTitle>
             <CardDescription>

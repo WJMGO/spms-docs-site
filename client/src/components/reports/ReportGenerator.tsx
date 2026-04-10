@@ -251,7 +251,7 @@ export function ReportGenerator({ onGenerate, isLoading }: ReportGeneratorProps)
             </div>
             <Checkbox
               checked={includeCharts}
-              onCheckedChange={setIncludeCharts}
+              onCheckedChange={(checked) => setIncludeCharts(checked === true)}
             />
           </div>
           <div className="flex items-center justify-between">
@@ -261,7 +261,7 @@ export function ReportGenerator({ onGenerate, isLoading }: ReportGeneratorProps)
             </div>
             <Checkbox
               checked={includeDetails}
-              onCheckedChange={setIncludeDetails}
+              onCheckedChange={(checked) => setIncludeDetails(checked === true)}
             />
           </div>
         </CardContent>

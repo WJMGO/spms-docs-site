@@ -253,7 +253,7 @@ export function ExportTools({ onExport, isLoading }: ExportToolsProps) {
               </div>
               <Checkbox
                 checked={includeMetadata}
-                onCheckedChange={setIncludeMetadata}
+                onCheckedChange={(checked) => setIncludeMetadata(checked === true)}
               />
             </div>
           </CardContent>
