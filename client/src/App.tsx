@@ -9,6 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import ManagementDashboard from "./pages/ManagementDashboard";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import ReportsPage from "./pages/ReportsPage";
+import TestPage from "./pages/TestPage";
 
 
 function Router() {
@@ -18,6 +19,7 @@ function Router() {
       <Route path={"/management"} component={ManagementDashboard} />
       <Route path={"/analytics"} component={AnalyticsPage} />
       <Route path={"/reports"} component={ReportsPage} />
+      <Route path={"/test"} component={TestPage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

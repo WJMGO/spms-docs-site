@@ -75,7 +75,7 @@ const mockStats = {
   ],
 };
 
-export function ReportsPage() {
+export default function ReportsPage() {
   const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
   const [reportType, setReportType] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState<string>("");
