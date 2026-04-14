@@ -7,6 +7,7 @@ import { router, protectedProcedure } from '../trpc';
 import { z } from 'zod';
 import { getDb, performanceAssessments } from '../db';
 import { eq, and } from 'drizzle-orm';
+import { logAudit } from '../audit-logger';
 
 /**
  * 获取员工排序列表
@@ -96,25 +97,60 @@ const updateScore = protectedProcedure
       penaltyScore: z.number().optional(),
     })
   )
-  .mutation(async ({ input }) => {
+  .mutation(async ({ input, ctx }: any) => {
     const db = await getDb();
 
-    // 更新评分
-    await db
-      .update(performanceAssessments)
-      .set({
-        totalScore: input.totalScore,
-        dailyWorkScore: input.dailyWorkScore,
-        workQualityScore: input.workQualityScore,
-        personalGoalScore: input.personalGoalScore,
-        departmentReviewScore: input.departmentReviewScore,
-        bonusScore: input.bonusScore,
-        penaltyScore: input.penaltyScore,
-        updatedAt: new Date(),
-      })
-      .where(eq(performanceAssessments.id, input.assessmentId));
+    try {
+      // 获取旧值用于审计日志
+      const oldAssessment = await db.query.performanceAssessments.findFirst({
+        where: eq(performanceAssessments.id, input.assessmentId),
+      });
 
-    return { success: true, message: '分数已更新' };
+      // 更新评分
+      await db
+        .update(performanceAssessments)
+        .set({
+          totalScore: input.totalScore,
+          dailyWorkScore: input.dailyWorkScore,
+          workQualityScore: input.workQualityScore,
+          personalGoalScore: input.personalGoalScore,
+          departmentReviewScore: input.departmentReviewScore,
+          bonusScore: input.bonusScore,
+          penaltyScore: input.penaltyScore,
+          updatedAt: new Date(),
+        })
+        .where(eq(performanceAssessments.id, input.assessmentId));
+
+      // 记录审计日志
+      await logAudit({
+        userId: ctx.user?.id || 'unknown',
+        userName: ctx.user?.name || 'Unknown',
+        action: 'edit_score',
+        resource: 'assessment',
+        resourceId: input.assessmentId,
+        resourceName: `Assessment ${input.assessmentId}`,
+        changes: {
+          totalScore: { old: oldAssessment?.totalScore, new: input.totalScore },
+        },
+        oldValue: oldAssessment,
+        newValue: input,
+        status: 'success',
+      });
+
+      return { success: true, message: '分数已更新' };
+    } catch (error) {
+      // 记录失败的审计日志
+      await logAudit({
+        userId: ctx.user?.id || 'unknown',
+        userName: ctx.user?.name || 'Unknown',
+        action: 'edit_score',
+        resource: 'assessment',
+        resourceId: input.assessmentId,
+        status: 'failure',
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      });
+      throw error;
+    }
   });
 
 /**
@@ -131,21 +167,55 @@ const updateRanking = protectedProcedure
       ),
     })
   )
-  .mutation(async ({ input }) => {
+  .mutation(async ({ input, ctx }: any) => {
     const db = await getDb();
 
-    // 批量更新排名
-    for (const update of input.updates) {
-      await db
-        .update(performanceAssessments)
-        .set({
-          rank: update.rank,
-          updatedAt: new Date(),
-        })
-        .where(eq(performanceAssessments.id, update.assessmentId));
-    }
+    try {
+      // 批量更新排名
+      for (const update of input.updates) {
+        const oldAssessment = await db.query.performanceAssessments.findFirst({
+          where: eq(performanceAssessments.id, update.assessmentId),
+        });
 
-    return { success: true, message: '排名已更新' };
+        await db
+          .update(performanceAssessments)
+          .set({
+            rank: update.rank,
+            updatedAt: new Date(),
+          })
+          .where(eq(performanceAssessments.id, update.assessmentId));
+
+        // 记录每个更新的审计日志
+        await logAudit({
+          userId: ctx.user?.id || 'unknown',
+          userName: ctx.user?.name || 'Unknown',
+          action: 'batch_update',
+          resource: 'assessment',
+          resourceId: update.assessmentId,
+          resourceName: `Assessment ${update.assessmentId}`,
+          changes: {
+            rank: { old: oldAssessment?.rank, new: update.rank },
+          },
+          oldValue: { rank: oldAssessment?.rank },
+          newValue: { rank: update.rank },
+          status: 'success',
+        });
+      }
+
+      return { success: true, message: '排名已更新' };
+    } catch (error) {
+      // 记录失败的审计日志
+      await logAudit({
+        userId: ctx.user?.id || 'unknown',
+        userName: ctx.user?.name || 'Unknown',
+        action: 'batch_update',
+        resource: 'assessment',
+        resourceId: 'batch',
+        status: 'failure',
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      });
+      throw error;
+    }
   });
 
 /**
@@ -347,19 +417,54 @@ const publishFinal = protectedProcedure
       periodId: z.string(),
     })
   )
-  .mutation(async ({ input }) => {
+  .mutation(async ({ input, ctx }: any) => {
     const db = await getDb();
 
-    // 更新所有该周期的评分为已定版
-    await db
-      .update(performanceAssessments)
-      .set({
-        status: 'finalized',
-        updatedAt: new Date(),
-      })
-      .where(eq(performanceAssessments.periodId, input.periodId));
+    try {
+      // 获取所有该周期的评分
+      const assessments = await db.query.performanceAssessments.findMany({
+        where: eq(performanceAssessments.periodId, input.periodId),
+      });
 
-    return { success: true, message: '已定版发布' };
+      // 更新所有该周期的评分为已定版
+      await db
+        .update(performanceAssessments)
+        .set({
+          status: 'finalized',
+          updatedAt: new Date(),
+        })
+        .where(eq(performanceAssessments.periodId, input.periodId));
+
+      // 记录审计日志
+      await logAudit({
+        userId: ctx.user?.id || 'unknown',
+        userName: ctx.user?.name || 'Unknown',
+        action: 'publish_assessment',
+        resource: 'period',
+        resourceId: input.periodId,
+        resourceName: `Period ${input.periodId}`,
+        changes: {
+          status: { old: 'approved', new: 'finalized' },
+          count: assessments.length,
+        },
+        newValue: { status: 'finalized', count: assessments.length },
+        status: 'success',
+      });
+
+      return { success: true, message: '已定版发布' };
+    } catch (error) {
+      // 记录失败的审计日志
+      await logAudit({
+        userId: ctx.user?.id || 'unknown',
+        userName: ctx.user?.name || 'Unknown',
+        action: 'publish_assessment',
+        resource: 'period',
+        resourceId: input.periodId,
+        status: 'failure',
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      });
+      throw error;
+    }
   });
 
 /**

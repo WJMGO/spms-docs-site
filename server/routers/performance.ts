@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { getDb, performanceAssessments, workQualityDetails, personalGoalDetails, departmentReviewDetails, bonusDetails, penaltyDetails, employees } from '../db';
 import { eq } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
+import { logAudit } from '../audit-logger';
 import {
   calculateWorkQualityScore,
   calculatePersonalGoalScore,
@@ -78,7 +79,7 @@ const workQualityRouter = router({
    */
   save: protectedProcedure
     .input(workQualityInput)
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }: any) => {
       const db = await getDb();
 
       // 计算分数
@@ -145,6 +146,21 @@ const workQualityRouter = router({
         })
         .where(eq(performanceAssessments.id, input.assessmentId));
 
+      // 记录审计日志
+      await logAudit({
+        userId: ctx.user?.id || 'unknown',
+        userName: ctx.user?.name || 'Unknown',
+        action: 'save_work_quality_score',
+        resource: 'assessment',
+        resourceId: input.assessmentId,
+        resourceName: `Assessment ${input.assessmentId}`,
+        changes: {
+          workQualityScore: score,
+        },
+        newValue: input,
+        status: 'success',
+      });
+
       return { success: true, score };
     }),
 
@@ -171,7 +187,7 @@ const personalGoalRouter = router({
    */
   save: protectedProcedure
     .input(personalGoalInput)
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }: any) => {
       const db = await getDb();
 
       // 计算分数
@@ -248,7 +264,7 @@ const departmentReviewRouter = router({
    */
   save: protectedProcedure
     .input(departmentReviewInput)
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }: any) => {
       const db = await getDb();
 
       // 计算平均分作为排名百分比的参考
@@ -321,7 +337,7 @@ const bonusRouter = router({
    */
   save: protectedProcedure
     .input(bonusInput)
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }: any) => {
       const db = await getDb();
 
       // 计算分数
@@ -411,7 +427,7 @@ const penaltyRouter = router({
    */
   save: protectedProcedure
     .input(penaltyInput)
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }: any) => {
       const db = await getDb();
 
       // 计算分数

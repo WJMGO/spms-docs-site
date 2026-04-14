@@ -23,7 +23,12 @@ export type AuditAction =
   | 'delete_user'
   | 'export_data'
   | 'import_data'
-  | 'batch_update';
+  | 'batch_update'
+  | 'save_work_quality_score'
+  | 'save_personal_goal_score'
+  | 'save_department_review_score'
+  | 'save_bonus_score'
+  | 'save_penalty_score';
 
 export type AuditResource = 
   | 'assessment'
@@ -33,7 +38,8 @@ export type AuditResource =
   | 'permission'
   | 'report'
   | 'department'
-  | 'employee';
+  | 'employee'
+  | 'audit_log';
 
 export interface AuditLogEntry {
   userId: string;
@@ -48,6 +54,7 @@ export interface AuditLogEntry {
   status: 'success' | 'failure';
   errorMessage?: string;
   ipAddress?: string;
+  timestamp?: Date;
   userAgent?: string;
 }
 
