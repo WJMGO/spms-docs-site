@@ -5,6 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Download, Lock, CheckCircle2, AlertCircle } from 'lucide-react';
+import { PermissionGuard, PermissionButton, PermissionDenied } from '@/components/PermissionGuard';
+import { Permission } from '@shared/permissions';
 
 interface EmployeeRanking {
   id: string;
@@ -25,6 +27,8 @@ interface EmployeeRanking {
 }
 
 export default function ManagementDashboard() {
+  // TODO: 从 useAuth 或 trpc 获取用户权限
+  const userPermissions: Permission[] = [];
   const [periodId, setPeriodId] = useState('current');
   const [departmentId, setDepartmentId] = useState<string | undefined>();
   const [sortBy, setSortBy] = useState<'score_desc' | 'score_asc' | 'name' | 'rank'>('score_desc');
@@ -248,13 +252,8 @@ export default function ManagementDashboard() {
     }
 
     try {
-      // 这里应该调用真实 API
-      // await trpc.management.updateScore.mutate({
-      //   assessmentId: item.id,
-      //   totalScore: newScore,
-      // });
-
-      setSaveMessage({ type: 'success', text: `${item.employee?.name} 的分数已更新为 ${newScore}` });
+      // TODO: 调用 API 保存分数
+      setSaveMessage({ type: 'success', text: `已保存 ${item.employee?.name} 的分数` });
       setEditingId(null);
       setEditingScore(null);
       setTimeout(() => setSaveMessage(null), 3000);
@@ -268,52 +267,39 @@ export default function ManagementDashboard() {
   const handlePublish = async () => {
     setIsPublishing(true);
     try {
-      // 这里应该调用真实 API
-      // await trpc.management.publishFinal.mutate({
-      //   periodId: periodId,
-      // });
-
-      setSaveMessage({ type: 'success', text: '已定版发布，所有评分已锁定' });
+      // TODO: 调用 API 发布定版
+      setSaveMessage({ type: 'success', text: '绩效已定版发布' });
       setTimeout(() => setSaveMessage(null), 3000);
     } catch (error) {
-      setSaveMessage({ type: 'error', text: '定版发布失败，请重试' });
+      setSaveMessage({ type: 'error', text: '发布失败，请重试' });
       setTimeout(() => setSaveMessage(null), 3000);
     } finally {
       setIsPublishing(false);
     }
   };
 
-  // 处理导出
-  const handleExport = () => {
-    const csvContent = [
-      ['排名', '姓名', '职位', '部门', '总分', '等级'],
-      ...filteredRanking.map((item: EmployeeRanking) => [
-        item.rank,
-        item.employee?.name,
-        item.employee?.position?.name,
-        item.employee?.department?.name,
-        item.totalScore,
-        item.level,
-      ]),
-    ]
-      .map((row) => row.join(','))
-      .join('\n');
+  // 检查权限
+  const canViewDashboard = userPermissions.includes(Permission.DASHBOARD_VIEW);
+  const canEditScore = userPermissions.includes(Permission.DASHBOARD_EDIT_SCORE);
+  const canPublish = userPermissions.includes(Permission.DASHBOARD_PUBLISH);
 
-    const element = document.createElement('a');
-    const file = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    element.href = URL.createObjectURL(file);
-    element.download = `performance-ranking-${new Date().toISOString().split('T')[0]}.csv`;
-    document.body.appendChild(element);
-    element.click();
-    document.body.removeChild(element);
-  };
+  if (!canViewDashboard) {
+    return (
+      <div className="container mx-auto py-8">
+        <PermissionDenied
+          message="您没有权限访问管理层仪表板"
+          requiredPermission={Permission.DASHBOARD_VIEW}
+        />
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="container mx-auto py-8 space-y-6">
       {/* 标题 */}
       <div>
         <h1 className="text-3xl font-bold text-foreground">管理层绩效处理仪表板</h1>
-        <p className="text-muted-foreground mt-2">月底绩效数据处理、调整排名以及部门间排序穿插</p>
+        <p className="text-muted-foreground mt-2">查看、编辑和发布员工绩效评分</p>
       </div>
 
       {/* 消息提示 */}
@@ -321,277 +307,265 @@ export default function ManagementDashboard() {
         <div
           className={`p-4 rounded-lg flex items-center gap-2 ${
             saveMessage.type === 'success'
-              ? 'bg-green-50 text-green-800 border border-green-200'
-              : 'bg-red-50 text-red-800 border border-red-200'
+              ? 'bg-green-100 text-green-800'
+              : 'bg-red-100 text-red-800'
           }`}
         >
           {saveMessage.type === 'success' ? (
-            <CheckCircle2 className="w-5 h-5" />
+            <CheckCircle2 size={20} />
           ) : (
-            <AlertCircle className="w-5 h-5" />
+            <AlertCircle size={20} />
           )}
-          <span>{saveMessage.text}</span>
+          {saveMessage.text}
         </div>
       )}
 
-      {/* 快速筛选 */}
+      {/* 统计卡片 */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">总人数</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{periodStats.stats.total}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">已完成</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">{periodStats.stats.completed}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">待处理</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-yellow-600">{periodStats.stats.pending}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">平均分</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{periodStats.stats.averageScore.toFixed(1)}</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* 绩效分布 */}
       <Card>
         <CardHeader>
-          <CardTitle>快速筛选</CardTitle>
+          <CardTitle>绩效等级分布</CardTitle>
+          <CardDescription>本周期员工绩效等级分布情况</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <label className="text-sm font-medium text-foreground">评分周期</label>
-              <Select value={periodId} onValueChange={setPeriodId}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="current">当前周期</SelectItem>
-                  <SelectItem value="2026-03">2026年3月</SelectItem>
-                  <SelectItem value="2026-02">2026年2月</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-foreground">部门筛选</label>
-              <Select value={departmentId || 'all'} onValueChange={(v) => setDepartmentId(v === 'all' ? undefined : v)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">全部部门</SelectItem>
-                  <SelectItem value="平台设计一部">平台设计一部</SelectItem>
-                  <SelectItem value="平台设计二部">平台设计二部</SelectItem>
-                  <SelectItem value="基础架构部">基础架构部</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-foreground">排序方式</label>
-              <Select value={sortBy} onValueChange={(v: any) => setSortBy(v)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="score_desc">分数从高到低</SelectItem>
-                  <SelectItem value="score_asc">分数从低到高</SelectItem>
-                  <SelectItem value="name">按名字排序</SelectItem>
-                  <SelectItem value="rank">按排名排序</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-foreground">搜索员工</label>
-              <Input
-                placeholder="输入员工名字..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* 周期统计信息 */}
-      {periodStats && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">总评分数</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{periodStats.stats.total}</div>
-              <p className="text-xs text-muted-foreground mt-1">本周期所有评分</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">已完成</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{periodStats.stats.completed}</div>
-              <p className="text-xs text-muted-foreground mt-1">已提交或已批准</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">待处理</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-yellow-600">{periodStats.stats.pending}</div>
-              <p className="text-xs text-muted-foreground mt-1">草稿或待审批</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">平均分</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{periodStats.stats.averageScore}</div>
-              <p className="text-xs text-muted-foreground mt-1">本周期平均分数</p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* 绩效分布统计 */}
-      {distributionData && (
-        <Card>
-          <CardHeader>
-            <CardTitle>绩效分布统计</CardTitle>
-            <CardDescription>本周期员工绩效等级分布情况</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {Object.entries(distributionData.distribution).map(([key, value]: [string, any]) => (
+        <CardContent>
+          <div className="space-y-3">
+            {Object.entries(distributionData.distribution).map(([key, data]: any) => (
               <div key={key}>
-                <div className="flex justify-between mb-2">
-                  <span className="text-sm font-medium">{getLevelLabel(key)}</span>
-                  <span className="text-sm text-muted-foreground">
-                    {value.count} 人 ({value.percentage}%)
-                  </span>
+                <div className="flex justify-between text-sm mb-1">
+                  <span>{getLevelLabel(key)}</span>
+                  <span className="font-medium">{data.count} 人 ({data.percentage}%)</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div
                     className={`h-2 rounded-full ${getDistributionColor(key)}`}
-                    style={{ width: `${value.percentage}%` }}
-                  />
+                    style={{ width: `${data.percentage}%` }}
+                  ></div>
                 </div>
               </div>
             ))}
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* 员工排序表 */}
       <Card>
         <CardHeader>
-          <CardTitle>员工排序表</CardTitle>
-          <CardDescription>点击分数可编辑，支持拖拽调整排名</CardDescription>
+          <CardTitle>员工绩效排序</CardTitle>
+          <CardDescription>查看和编辑员工绩效分数</CardDescription>
         </CardHeader>
-        <CardContent>
-          {rankingLoading ? (
-            <div className="text-center py-8 text-muted-foreground">加载中...</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="text-left py-3 px-4 font-semibold text-sm">排名</th>
-                    <th className="text-left py-3 px-4 font-semibold text-sm">姓名</th>
-                    <th className="text-left py-3 px-4 font-semibold text-sm">职位</th>
-                    <th className="text-left py-3 px-4 font-semibold text-sm">部门</th>
-                    <th className="text-left py-3 px-4 font-semibold text-sm">总分</th>
-                    <th className="text-left py-3 px-4 font-semibold text-sm">等级</th>
-                    <th className="text-left py-3 px-4 font-semibold text-sm">操作</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredRanking.map((item: EmployeeRanking) => (
-                    <tr key={item.id} className="border-b border-border hover:bg-muted/50">
-                      <td className="py-3 px-4 text-sm font-medium">{item.rank}</td>
-                      <td className="py-3 px-4 text-sm">{item.employee?.name}</td>
-                      <td className="py-3 px-4 text-sm text-muted-foreground">{item.employee?.position?.name}</td>
-                      <td className="py-3 px-4 text-sm text-muted-foreground">{item.employee?.department?.name}</td>
-                      <td
-                        className="py-3 px-4 text-sm font-semibold cursor-pointer hover:bg-blue-50 rounded"
-                        onClick={() => {
-                          setEditingId(item.id);
-                          setEditingScore(item.totalScore);
-                        }}
+        <CardContent className="space-y-4">
+          {/* 筛选和搜索 */}
+          <div className="flex gap-4 flex-wrap">
+            <Input
+              placeholder="搜索员工名称..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="flex-1 min-w-[200px]"
+            />
+            <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="排序方式" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="score_desc">分数从高到低</SelectItem>
+                <SelectItem value="score_asc">分数从低到高</SelectItem>
+                <SelectItem value="name">按名字排序</SelectItem>
+                <SelectItem value="rank">按排名排序</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* 员工列表 */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="border-b">
+                <tr>
+                  <th className="text-left py-2 px-2">排名</th>
+                  <th className="text-left py-2 px-2">员工名称</th>
+                  <th className="text-left py-2 px-2">部门</th>
+                  <th className="text-left py-2 px-2">岗位</th>
+                  <th className="text-left py-2 px-2">分数</th>
+                  <th className="text-left py-2 px-2">等级</th>
+                  <th className="text-left py-2 px-2">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredRanking.map((item: EmployeeRanking) => (
+                  <tr key={item.id} className="border-b hover:bg-muted/50">
+                    <td className="py-2 px-2 font-bold">{item.rank}</td>
+                    <td className="py-2 px-2">{item.employee?.name}</td>
+                    <td className="py-2 px-2">{item.employee?.department?.name}</td>
+                    <td className="py-2 px-2">{item.employee?.position?.name}</td>
+                    <td className="py-2 px-2">
+                      {editingId === item.id ? (
+                        <Input
+                          type="number"
+                          min="0"
+                          max="150"
+                          value={editingScore || ''}
+                          onChange={(e) => setEditingScore(e.target.value)}
+                          className="w-20"
+                          autoFocus
+                        />
+                      ) : (
+                        <span className="font-medium">{item.totalScore}</span>
+                      )}
+                    </td>
+                    <td className="py-2 px-2">
+                      <Badge className={getLevelColor(item.level)}>{item.level}</Badge>
+                    </td>
+                    <td className="py-2 px-2">
+                      <PermissionGuard
+                        permission={Permission.DASHBOARD_EDIT_SCORE}
+                        userPermissions={userPermissions}
+                        fallback={<span className="text-muted-foreground text-xs">无权限</span>}
                       >
                         {editingId === item.id ? (
-                          <Input
-                            type="number"
-                            value={editingScore || ''}
-                            onChange={(e) => setEditingScore(e.target.value ? parseFloat(e.target.value) : null)}
-                            onBlur={() => handleScoreSave(item)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') handleScoreSave(item);
-                              if (e.key === 'Escape') setEditingId(null);
-                            }}
-                            autoFocus
-                            className="w-20"
-                          />
+                          <div className="flex gap-1">
+                            <Button
+                              size="sm"
+                              variant="default"
+                              onClick={() => handleScoreSave(item)}
+                            >
+                              保存
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setEditingId(null);
+                                setEditingScore(null);
+                              }}
+                            >
+                              取消
+                            </Button>
+                          </div>
                         ) : (
-                          item.totalScore
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setEditingId(item.id);
+                              setEditingScore(item.totalScore);
+                            }}
+                          >
+                            编辑
+                          </Button>
                         )}
-                      </td>
-                      <td className="py-3 px-4 text-sm">
-                        <Badge className={getLevelColor(item.level)}>{item.level}</Badge>
-                      </td>
-                      <td className="py-3 px-4 text-sm">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setEditingId(item.id);
-                            setEditingScore(item.totalScore);
-                          }}
-                        >
-                          编辑
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                      </PermissionGuard>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </CardContent>
       </Card>
 
       {/* 部门对比 */}
-      {departmentComparison && (
-        <Card>
-          <CardHeader>
-            <CardTitle>部门对比</CardTitle>
-            <CardDescription>各部门的绩效统计对比</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              {departmentComparison.map((dept: any) => (
-                <div key={dept.departmentId} className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <h3 className="font-semibold text-foreground">{dept.departmentName}</h3>
-                    <span className="text-sm text-muted-foreground">
-                      {dept.total} 人 | 平均分: {dept.averageScore}
-                    </span>
+      <Card>
+        <CardHeader>
+          <CardTitle>部门对比</CardTitle>
+          <CardDescription>各部门平均分和人数对比</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {departmentComparison.map((dept: any) => (
+              <Card key={dept.departmentId} className="bg-muted/50">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">{dept.departmentName}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div>
+                    <span className="text-sm text-muted-foreground">平均分</span>
+                    <div className="text-2xl font-bold">{dept.averageScore.toFixed(1)}</div>
                   </div>
-                  <div className="grid grid-cols-5 gap-2">
-                    {Object.entries(dept.distribution).map(([key, count]: [string, any]) => (
-                      <div key={key} className="text-center">
-                        <div className={`rounded p-2 text-white text-sm font-semibold ${getDistributionColor(key)}`}>
-                          {count}
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">{getLevelLabel(key).split(' ')[0]}</p>
-                      </div>
-                    ))}
+                  <div>
+                    <span className="text-sm text-muted-foreground">人数</span>
+                    <div className="text-xl font-semibold">{dept.total} 人</div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* 快速操作 */}
-      <div className="flex gap-3 justify-end">
-        <Button variant="outline" className="gap-2" onClick={handleExport}>
-          <Download className="w-4 h-4" />
-          导出排序表
-        </Button>
-        <Button className="gap-2" onClick={handlePublish} disabled={isPublishing}>
-          <Lock className="w-4 h-4" />
-          {isPublishing ? '发布中...' : '定版发布'}
-        </Button>
+      {/* 操作按钮 */}
+      <div className="flex gap-4">
+        <PermissionGuard
+          permission={Permission.DASHBOARD_PUBLISH}
+          userPermissions={userPermissions}
+          fallback={
+            <Button disabled className="gap-2">
+              <Lock size={16} />
+              定版发布（无权限）
+            </Button>
+          }
+        >
+          <Button
+            onClick={handlePublish}
+            disabled={isPublishing}
+            className="gap-2"
+          >
+            <CheckCircle2 size={16} />
+            {isPublishing ? '发布中...' : '定版发布'}
+          </Button>
+        </PermissionGuard>
+
+        <PermissionGuard
+          permission={Permission.ANALYTICS_EXPORT}
+          userPermissions={userPermissions}
+          fallback={
+            <Button variant="outline" disabled className="gap-2">
+              <Download size={16} />
+              导出数据（无权限）
+            </Button>
+          }
+        >
+          <Button variant="outline" className="gap-2">
+            <Download size={16} />
+            导出数据
+          </Button>
+        </PermissionGuard>
       </div>
     </div>
   );
