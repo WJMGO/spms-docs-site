@@ -33,7 +33,8 @@ export type AuditAction =
   | 'update_employee'
   | 'delete_employee'
   | 'import_employees'
-  | 'export_employees';
+  | 'export_employees'
+  | 'parse_employee_file';
 
 export type AuditResource = 
   | 'assessment'

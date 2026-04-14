@@ -1,6 +1,7 @@
 import { router, protectedProcedure } from '../trpc';
 import { z } from 'zod';
 import { logAudit } from '../audit-logger';
+import { parseFile } from '../file-parser';
 
 export const employeeRouter = router({
   // 获取员工列表
@@ -159,6 +160,36 @@ export const employeeRouter = router({
       });
 
       return { success: true };
+    }),
+
+  // 解析上传的文件
+  parseFile: protectedProcedure
+    .input(
+      z.object({
+        fileContent: z.string(),
+        filename: z.string(),
+      })
+    )
+    .mutation(async ({ input, ctx }: any) => {
+      const result = parseFile(input.fileContent, input.filename);
+
+      // 记录审计日志
+      await logAudit({
+        userId: ctx.user.id,
+        userName: ctx.user.name || 'Unknown',
+        action: 'parse_employee_file',
+        resource: 'employee',
+        resourceId: 'batch',
+        changes: {
+          filename: input.filename,
+          total: result.summary.total,
+          valid: result.summary.valid,
+          invalid: result.summary.invalid,
+        },
+        status: result.success ? 'success' : 'failure',
+      });
+
+      return result;
     }),
 
   // 批量导入员工

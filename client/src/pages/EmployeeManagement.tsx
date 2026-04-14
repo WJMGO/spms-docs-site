@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Search, Plus, Edit2, Trash2, Download, Upload } from 'lucide-react';
+import EmployeeBatchImport from '@/components/EmployeeBatchImport';
 
 interface Employee {
   id: string;
@@ -208,10 +209,7 @@ export default function EmployeeManagement() {
                   <Download size={16} />
                   导出
                 </Button>
-                <Button variant="outline" className="gap-2">
-                  <Upload size={16} />
-                  导入
-                </Button>
+                <EmployeeBatchImport />
               </div>
             </div>
           </CardHeader>
