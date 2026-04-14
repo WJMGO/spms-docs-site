@@ -12,6 +12,7 @@ import ReportsPage from "./pages/ReportsPage";
 import TestPage from "./pages/TestPage";
 import AuditLogsPage from "./pages/AuditLogsPage";
 import PermissionsPage from "./pages/PermissionsPage";
+import EmployeeManagement from "./pages/EmployeeManagement";
 
 
 function Router() {
@@ -21,6 +22,7 @@ function Router() {
       <Route path={"/management"} component={ManagementDashboard} />
       <Route path={"/analytics"} component={AnalyticsPage} />
       <Route path={"/reports"} component={ReportsPage} />
+      <Route path={"/employees"} component={EmployeeManagement} />
       <Route path={"/audit-logs"} component={AuditLogsPage} />
       <Route path={"/permissions"} component={PermissionsPage} />
       <Route path={"/test"} component={TestPage} />
