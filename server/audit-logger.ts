@@ -28,7 +28,12 @@ export type AuditAction =
   | 'save_personal_goal_score'
   | 'save_department_review_score'
   | 'save_bonus_score'
-  | 'save_penalty_score';
+  | 'save_penalty_score'
+  | 'create_employee'
+  | 'update_employee'
+  | 'delete_employee'
+  | 'import_employees'
+  | 'export_employees';
 
 export type AuditResource = 
   | 'assessment'
