@@ -6,8 +6,10 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Search, Plus, Edit2, Trash2, Download, Upload } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Download } from 'lucide-react';
 import EmployeeBatchImport from '@/components/EmployeeBatchImport';
+import { trpc } from '@/trpc';
+import { toast } from 'sonner';
 
 interface Employee {
   id: string;
@@ -25,42 +27,6 @@ interface Department {
 }
 
 export default function EmployeeManagement() {
-  const [employees, setEmployees] = useState<Employee[]>([
-    {
-      id: 'emp1',
-      name: '张三',
-      email: 'zhangsan@example.com',
-      role: 'user',
-      departmentId: 'dept1',
-      createdAt: new Date('2026-01-01'),
-      updatedAt: new Date('2026-01-01'),
-    },
-    {
-      id: 'emp2',
-      name: '李四',
-      email: 'lisi@example.com',
-      role: 'user',
-      departmentId: 'dept1',
-      createdAt: new Date('2026-01-02'),
-      updatedAt: new Date('2026-01-02'),
-    },
-    {
-      id: 'emp3',
-      name: '王五',
-      email: 'wangwu@example.com',
-      role: 'admin',
-      departmentId: 'dept2',
-      createdAt: new Date('2026-01-03'),
-      updatedAt: new Date('2026-01-03'),
-    },
-  ]);
-
-  const departments: Department[] = [
-    { id: 'dept1', name: '平台设计一部' },
-    { id: 'dept2', name: '平台设计二部' },
-    { id: 'dept3', name: '基础架构部' },
-  ];
-
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState<string>('');
   const [selectedRole, setSelectedRole] = useState<string>('');
@@ -69,30 +35,102 @@ export default function EmployeeManagement() {
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [newEmployeeData, setNewEmployeeData] = useState({
+    name: '',
+    email: '',
+    departmentId: '',
+    role: 'user' as const,
+  });
+
+  // 获取员工列表
+  const { data: employeeList, isLoading: employeesLoading, refetch: refetchEmployees } = trpc.employees.list.useQuery({
+    page: 1,
+    pageSize: 100,
+    search: searchQuery,
+    departmentId: selectedDepartment || undefined,
+    role: (selectedRole as 'admin' | 'user') || undefined,
+    sortBy: sortBy as any,
+    sortOrder: sortOrder as any,
+  });
+
+  const employees = employeeList?.data || [];
+  const departments: Department[] = [
+    { id: 'dept1', name: '平台设计一部' },
+    { id: 'dept2', name: '平台设计二部' },
+    { id: 'dept3', name: '基础架构部' },
+  ];
+
+  // 创建员工
+  const createMutation = trpc.employees.create.useMutation({
+    onSuccess: () => {
+      toast.success('员工创建成功');
+      setIsCreateDialogOpen(false);
+      setNewEmployeeData({ name: '', email: '', departmentId: '', role: 'user' });
+      refetchEmployees();
+    },
+    onError: (error) => {
+      toast.error(`创建失败: ${error.message}`);
+    },
+  });
+
+  // 更新员工
+  const updateMutation = trpc.employees.update.useMutation({
+    onSuccess: () => {
+      toast.success('员工更新成功');
+      setIsEditDialogOpen(false);
+      setEditingEmployee(null);
+      refetchEmployees();
+    },
+    onError: (error) => {
+      toast.error(`更新失败: ${error.message}`);
+    },
+  });
+
+  // 删除员工
+  const deleteMutation = trpc.employees.delete.useMutation({
+    onSuccess: () => {
+      toast.success('员工删除成功');
+      refetchEmployees();
+    },
+    onError: (error) => {
+      toast.error(`删除失败: ${error.message}`);
+    },
+  });
+
+  // 导出员工
+  const { data: exportData } = trpc.employees.export.useQuery({
+    format: 'csv',
+    departmentId: selectedDepartment || undefined,
+  });
+
+  const handleExportClick = () => {
+    if (!exportData) {
+      toast.error('数据加载中...');
+      return;
+    }
+    
+    try {
+      // 创建 CSV 文件并下载
+      const csv = typeof exportData === 'string' ? exportData : (exportData as any).data;
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `employees_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast.success('导出成功');
+    } catch (error: any) {
+      toast.error(`导出失败: ${error.message}`);
+    }
+  };
 
   // 筛选和排序逻辑
+  // 筛选员工（客户端过滤）
   const filteredEmployees = useMemo(() => {
     let filtered = employees;
-
-    // 搜索过滤
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (emp) =>
-          emp.name.toLowerCase().includes(query) ||
-          emp.email.toLowerCase().includes(query)
-      );
-    }
-
-    // 部门过滤
-    if (selectedDepartment) {
-      filtered = filtered.filter((emp) => emp.departmentId === selectedDepartment);
-    }
-
-    // 角色过滤
-    if (selectedRole) {
-      filtered = filtered.filter((emp) => emp.role === selectedRole);
-    }
 
     // 排序
     filtered.sort((a, b) => {
@@ -112,61 +150,34 @@ export default function EmployeeManagement() {
     });
 
     return filtered;
-  }, [employees, searchQuery, selectedDepartment, selectedRole, sortBy, sortOrder]);
+  }, [employees, sortBy, sortOrder]);
 
-  const handleCreateEmployee = (formData: any) => {
-    const newEmployee: Employee = {
-      id: `emp_${Date.now()}`,
-      ...formData,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    setEmployees([...employees, newEmployee]);
-    setIsCreateDialogOpen(false);
+  const handleCreateEmployee = () => {
+    if (!newEmployeeData.name || !newEmployeeData.email || !newEmployeeData.departmentId) {
+      toast.error('请填写所有必填字段');
+      return;
+    }
+    createMutation.mutate(newEmployeeData);
   };
 
-  const handleUpdateEmployee = (formData: any) => {
-    if (editingEmployee) {
-      setEmployees(
-        employees.map((emp) =>
-          emp.id === editingEmployee.id
-            ? { ...emp, ...formData, updatedAt: new Date() }
-            : emp
-        )
-      );
-      setIsEditDialogOpen(false);
-      setEditingEmployee(null);
-    }
+  const handleUpdateEmployee = () => {
+    if (!editingEmployee) return;
+    updateMutation.mutate({
+      id: editingEmployee.id,
+      name: editingEmployee.name,
+      email: editingEmployee.email,
+      departmentId: editingEmployee.departmentId,
+      role: editingEmployee.role,
+    });
   };
 
   const handleDeleteEmployee = (id: string) => {
     if (confirm('确定要删除该员工吗？')) {
-      setEmployees(employees.filter((emp) => emp.id !== id));
+      deleteMutation.mutate({ id });
     }
   };
 
-  const handleExport = () => {
-    const csv = [
-      ['ID', '姓名', '邮箱', '部门', '角色', '创建时间'].join(','),
-      ...filteredEmployees.map((emp) =>
-        [
-          emp.id,
-          emp.name,
-          emp.email,
-          departments.find((d) => d.id === emp.departmentId)?.name || '',
-          emp.role,
-          emp.createdAt.toISOString(),
-        ].join(',')
-      ),
-    ].join('\n');
 
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `employees_${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-  };
 
   const getDepartmentName = (deptId: string) => {
     return departments.find((d) => d.id === deptId)?.name || '-';
@@ -179,6 +190,17 @@ export default function EmployeeManagement() {
       <Badge className="bg-blue-100 text-blue-800">普通员工</Badge>
     );
   };
+
+  if (employeesLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">加载数据中...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background p-8">
@@ -205,7 +227,7 @@ export default function EmployeeManagement() {
                   <Plus size={16} />
                   新增员工
                 </Button>
-                <Button variant="outline" onClick={handleExport} className="gap-2">
+                <Button variant="outline" onClick={handleExportClick} className="gap-2">
                   <Download size={16} />
                   导出
                 </Button>
@@ -256,60 +278,59 @@ export default function EmployeeManagement() {
               </Select>
 
               {/* 排序 */}
-              <Select value={`${sortBy}_${sortOrder}`} onValueChange={(val) => {
-                const [by, order] = val.split('_');
-                setSortBy(by as 'name' | 'email' | 'createdAt');
-                setSortOrder(order as 'asc' | 'desc');
+              <Select value={`${sortBy}_${sortOrder}`} onValueChange={(value) => {
+                const [by, order] = value.split('_');
+                setSortBy(by as any);
+                setSortOrder(order as any);
               }}>
                 <SelectTrigger>
                   <SelectValue placeholder="排序方式" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="name_asc">姓名 (升序)</SelectItem>
-                  <SelectItem value="name_desc">姓名 (降序)</SelectItem>
+                  <SelectItem value="name_asc">名称 (升序)</SelectItem>
+                  <SelectItem value="name_desc">名称 (降序)</SelectItem>
                   <SelectItem value="email_asc">邮箱 (升序)</SelectItem>
                   <SelectItem value="email_desc">邮箱 (降序)</SelectItem>
-                  <SelectItem value="createdAt_desc">最新创建</SelectItem>
-                  <SelectItem value="createdAt_asc">最早创建</SelectItem>
+                  <SelectItem value="createdAt_desc">创建时间 (最新)</SelectItem>
+                  <SelectItem value="createdAt_asc">创建时间 (最早)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             {/* 员工表格 */}
-            <div className="border rounded-lg overflow-hidden">
+            <div className="border rounded-lg overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-muted">
+                  <TableRow>
                     <TableHead>姓名</TableHead>
                     <TableHead>邮箱</TableHead>
                     <TableHead>部门</TableHead>
                     <TableHead>角色</TableHead>
                     <TableHead>创建时间</TableHead>
-                    <TableHead className="text-right">操作</TableHead>
+                    <TableHead>操作</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredEmployees.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                        没有找到匹配的员工
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredEmployees.map((employee) => (
-                      <TableRow key={employee.id} className="hover:bg-muted/50">
-                        <TableCell className="font-medium">{employee.name}</TableCell>
-                        <TableCell>{employee.email}</TableCell>
-                        <TableCell>{getDepartmentName(employee.departmentId)}</TableCell>
-                        <TableCell>{getRoleBadge(employee.role)}</TableCell>
-                        <TableCell>{employee.createdAt.toLocaleDateString('zh-CN')}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
+                  {filteredEmployees.length > 0 ? (
+                    filteredEmployees.map((emp) => (
+                      <TableRow key={emp.id}>
+                        <TableCell className="font-medium">{emp.name}</TableCell>
+                        <TableCell>{emp.email}</TableCell>
+                        <TableCell>{getDepartmentName(emp.departmentId)}</TableCell>
+                        <TableCell>{getRoleBadge(emp.role)}</TableCell>
+                        <TableCell>{new Date(emp.createdAt).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => {
-                                setEditingEmployee(employee);
+                                setEditingEmployee({
+                                  ...emp,
+                                  role: emp.role as 'admin' | 'user',
+                                  createdAt: new Date(emp.createdAt),
+                                  updatedAt: new Date(emp.updatedAt),
+                                });
                                 setIsEditDialogOpen(true);
                               }}
                             >
@@ -318,145 +339,158 @@ export default function EmployeeManagement() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleDeleteEmployee(employee.id)}
+                              onClick={() => handleDeleteEmployee(emp.id)}
+                              disabled={deleteMutation.isPending}
                             >
-                              <Trash2 size={16} className="text-red-500" />
+                              <Trash2 size={16} />
                             </Button>
                           </div>
                         </TableCell>
                       </TableRow>
                     ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                        没有找到匹配的员工
+                      </TableCell>
+                    </TableRow>
                   )}
                 </TableBody>
               </Table>
             </div>
           </CardContent>
         </Card>
+      </div>
 
-        {/* 创建员工对话框 */}
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>新增员工</DialogTitle>
-              <DialogDescription>填写员工信息并保存</DialogDescription>
-            </DialogHeader>
-            <EmployeeForm
-              departments={departments}
-              onSubmit={handleCreateEmployee}
-              onCancel={() => setIsCreateDialogOpen(false)}
-            />
-          </DialogContent>
-        </Dialog>
-
-        {/* 编辑员工对话框 */}
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>编辑员工</DialogTitle>
-              <DialogDescription>修改员工信息并保存</DialogDescription>
-            </DialogHeader>
-            {editingEmployee && (
-              <EmployeeForm
-                departments={departments}
-                initialData={editingEmployee}
-                onSubmit={handleUpdateEmployee}
-                onCancel={() => {
-                  setIsEditDialogOpen(false);
-                  setEditingEmployee(null);
-                }}
+      {/* 创建员工对话框 */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>新增员工</DialogTitle>
+            <DialogDescription>填写员工信息</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">姓名</label>
+              <Input
+                value={newEmployeeData.name}
+                onChange={(e) => setNewEmployeeData({ ...newEmployeeData, name: e.target.value })}
+                placeholder="输入员工姓名"
               />
-            )}
-          </DialogContent>
-        </Dialog>
-      </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">邮箱</label>
+              <Input
+                type="email"
+                value={newEmployeeData.email}
+                onChange={(e) => setNewEmployeeData({ ...newEmployeeData, email: e.target.value })}
+                placeholder="输入员工邮箱"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">部门</label>
+              <Select value={newEmployeeData.departmentId} onValueChange={(value) => setNewEmployeeData({ ...newEmployeeData, departmentId: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="选择部门" />
+                </SelectTrigger>
+                <SelectContent>
+                  {departments.map((dept) => (
+                    <SelectItem key={dept.id} value={dept.id}>
+                      {dept.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">角色</label>
+              <Select value={newEmployeeData.role} onValueChange={(value) => setNewEmployeeData({ ...newEmployeeData, role: value as any })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="选择角色" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="user">普通员工</SelectItem>
+                  <SelectItem value="admin">管理员</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                取消
+              </Button>
+              <Button onClick={handleCreateEmployee} disabled={createMutation.isPending}>
+                {createMutation.isPending ? '创建中...' : '创建'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 编辑员工对话框 */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>编辑员工</DialogTitle>
+            <DialogDescription>修改员工信息</DialogDescription>
+          </DialogHeader>
+          {editingEmployee && (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">姓名</label>
+                <Input
+                  value={editingEmployee.name}
+                  onChange={(e) => setEditingEmployee({ ...editingEmployee, name: e.target.value })}
+                  placeholder="输入员工姓名"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">邮箱</label>
+                <Input
+                  type="email"
+                  value={editingEmployee.email}
+                  onChange={(e) => setEditingEmployee({ ...editingEmployee, email: e.target.value })}
+                  placeholder="输入员工邮箱"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">部门</label>
+                <Select value={editingEmployee.departmentId} onValueChange={(value) => setEditingEmployee({ ...editingEmployee, departmentId: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="选择部门" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {departments.map((dept) => (
+                      <SelectItem key={dept.id} value={dept.id}>
+                        {dept.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">角色</label>
+                <Select value={editingEmployee.role} onValueChange={(value) => setEditingEmployee({ ...editingEmployee, role: value as any })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="选择角色" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="user">普通员工</SelectItem>
+                    <SelectItem value="admin">管理员</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                  取消
+                </Button>
+                <Button onClick={handleUpdateEmployee} disabled={updateMutation.isPending}>
+                  {updateMutation.isPending ? '保存中...' : '保存'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
-  );
-}
-
-// 员工表单组件
-function EmployeeForm({
-  departments,
-  initialData,
-  onSubmit,
-  onCancel,
-}: {
-  departments: Department[];
-  initialData?: Employee;
-  onSubmit: (data: any) => void;
-  onCancel: () => void;
-}) {
-  const [formData, setFormData] = useState({
-    name: initialData?.name || '',
-    email: initialData?.email || '',
-    departmentId: initialData?.departmentId || '',
-    role: initialData?.role || 'user',
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (formData.name && formData.email && formData.departmentId) {
-      onSubmit(formData);
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium mb-2">姓名</label>
-        <Input
-          value={formData.name}
-          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          placeholder="请输入员工姓名"
-          required
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium mb-2">邮箱</label>
-        <Input
-          type="email"
-          value={formData.email}
-          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-          placeholder="请输入员工邮箱"
-          required
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium mb-2">部门</label>
-        <Select value={formData.departmentId} onValueChange={(val) => setFormData({ ...formData, departmentId: val })}>
-          <SelectTrigger>
-            <SelectValue placeholder="选择部门" />
-          </SelectTrigger>
-          <SelectContent>
-            {departments.map((dept) => (
-              <SelectItem key={dept.id} value={dept.id}>
-                {dept.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium mb-2">角色</label>
-        <Select value={formData.role} onValueChange={(val) => setFormData({ ...formData, role: val as 'admin' | 'user' })}>
-          <SelectTrigger>
-            <SelectValue placeholder="选择角色" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="user">普通员工</SelectItem>
-            <SelectItem value="admin">管理员</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="flex gap-2 justify-end pt-4">
-        <Button type="button" variant="outline" onClick={onCancel}>
-          取消
-        </Button>
-        <Button type="submit">保存</Button>
-      </div>
-    </form>
   );
 }

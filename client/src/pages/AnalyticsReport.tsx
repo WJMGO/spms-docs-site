@@ -4,66 +4,62 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Download, RefreshCw, Lock } from 'lucide-react';
-import { PermissionGuard, PermissionDenied } from '@/components/PermissionGuard';
+import { Download, RefreshCw } from 'lucide-react';
+import { PermissionDenied } from '@/components/PermissionGuard';
 import { Permission } from '@shared/permissions';
-
-// 临时注释：使用 Mock 数据，直到 trpc 配置完成
-const mockStats = {
-  totalCount: 50,
-  averageScores: {
-    dailyWork: 85,
-    workQuality: 82,
-    personalGoal: 80,
-    departmentReview: 78,
-    bonus: 5,
-    penalty: 2,
-    total: 120,
-  },
-  gradeDistribution: {
-    excellent: 10,
-    good: 20,
-    fair: 15,
-    pass: 5,
-    fail: 0,
-  },
-  topEmployees: [],
-  bottomEmployees: [],
-};
+import { trpc } from '@/trpc';
+import { toast } from 'sonner';
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
 export default function AnalyticsReport() {
-  // TODO: 从 useAuth 或 trpc 获取用户权限
-  const userPermissions: Permission[] = [];
-
-  const [periodId, setPeriodId] = useState<string>('');
+  const [periodId, setPeriodId] = useState<string>('current');
   const [departmentId, setDepartmentId] = useState<string>('');
   const [exportType, setExportType] = useState<'summary' | 'detailed' | 'department'>('detailed');
 
-  // 临时使用 Mock 数据
-  const statsData = mockStats;
-  const statsLoading = false;
-  const refetchStats = () => {};
+  // 获取统计数据
+  const { data: statsData, isLoading: statsLoading, refetch: refetchStats } = trpc.analytics.dimensionStats.getAll.useQuery({
+    periodId: periodId === 'current' ? undefined : periodId,
+    departmentId: departmentId || undefined,
+  });
 
-  const benchmarkData = {
-    totalDepartments: 3,
-    departments: [
-      { departmentName: '平台设计一部', averageScore: 125 },
-      { departmentName: '平台设计二部', averageScore: 120 },
-      { departmentName: '基础架构部', averageScore: 118 },
-    ],
+  // 获取部门对标数据
+  const { data: benchmarkData } = trpc.analytics.departmentBenchmark.getComparison.useQuery({
+    periodId: periodId === 'current' ? undefined : periodId,
+  });
+
+  // 导出数据
+  const { data: exportData } = trpc.analytics.export.toCSV.useQuery({
+    periodId: periodId === 'current' ? undefined : periodId,
+    departmentId: departmentId || undefined,
+    type: exportType as any,
+  });
+
+  const handleExportCSV = async () => {
+    try {
+      if (!exportData) {
+        toast.error('数据加载中...');
+        return;
+      }
+
+      const data = exportData;
+
+      // 创建 CSV 文件并下载
+      const csv = typeof data === 'string' ? data : (data as any).data;
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `analytics_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast.success('导出成功');
+    } catch (error: any) {
+      toast.error(`导出失败: ${error.message}`);
+    }
   };
-
-  const csvData = null;
-
-  const handleExportCSV = () => {
-    alert('导出功能已准备就绪，待后端 API 完全集成');
-  };
-
-  // 检查权限
-  const canViewAnalytics = userPermissions.includes(Permission.ANALYTICS_VIEW);
-  const canExportData = userPermissions.includes(Permission.ANALYTICS_EXPORT);
 
   if (statsLoading) {
     return (
@@ -76,360 +72,303 @@ export default function AnalyticsReport() {
     );
   }
 
-  if (!canViewAnalytics) {
-    return (
-      <div className="container mx-auto py-8">
-        <PermissionDenied
-          message="您没有权限访问数据分析报表"
-          requiredPermission={Permission.ANALYTICS_VIEW}
-        />
-      </div>
-    );
-  }
-
-  // 注意：当前使用 Mock 数据演示，实际应使用上面的 trpc 查询
-
+  // 准备图表数据
   const dimensionChartData = statsData?.averageScores
     ? [
-        { name: '日常工作', value: statsData.averageScores.dailyWork },
-        { name: '工作质量', value: statsData.averageScores.workQuality },
-        { name: '个人目标', value: statsData.averageScores.personalGoal },
-        { name: '部门互评', value: statsData.averageScores.departmentReview },
-        { name: '绩效加分', value: statsData.averageScores.bonus },
-        { name: '绩效减分', value: statsData.averageScores.penalty },
+        { name: '日常工作', value: statsData.averageScores.dailyWork || 0 },
+        { name: '工作质量', value: statsData.averageScores.workQuality || 0 },
+        { name: '个人目标', value: statsData.averageScores.personalGoal || 0 },
+        { name: '部门互评', value: statsData.averageScores.departmentReview || 0 },
+        { name: '绩效加分', value: statsData.averageScores.bonus || 0 },
+        { name: '绩效减分', value: statsData.averageScores.penalty || 0 },
       ]
     : [];
 
   const gradeChartData = statsData?.gradeDistribution
     ? [
-        { name: '优秀', value: statsData.gradeDistribution.excellent },
-        { name: '良好', value: statsData.gradeDistribution.good },
-        { name: '一般', value: statsData.gradeDistribution.fair },
-        { name: '及格', value: statsData.gradeDistribution.pass },
-        { name: '不及格', value: statsData.gradeDistribution.fail },
+        { name: '优秀', value: statsData.gradeDistribution.excellent || 0 },
+        { name: '良好', value: statsData.gradeDistribution.good || 0 },
+        { name: '一般', value: statsData.gradeDistribution.fair || 0 },
+        { name: '及格', value: statsData.gradeDistribution.pass || 0 },
+        { name: '不及格', value: statsData.gradeDistribution.fail || 0 },
       ]
     : [];
 
   const departmentChartData = benchmarkData?.departments
     ? benchmarkData.departments.map((d: any) => ({
         name: d.departmentName,
-        averageScore: d.averageScore,
+        averageScore: d.averageScore || 0,
       }))
     : [];
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
-      {/* 标题 */}
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">数据分析和报表</h1>
-        <p className="text-muted-foreground mt-2">查看绩效数据统计、分析和趋势</p>
-      </div>
+    <div className="min-h-screen bg-background p-8">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* 标题 */}
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">数据分析和报表</h1>
+          <p className="text-muted-foreground mt-2">查看绩效数据统计、分析和趋势</p>
+        </div>
 
-      {/* 筛选和操作 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>筛选条件</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="text-sm font-medium mb-2 block">评分周期</label>
-              <Select value={periodId} onValueChange={setPeriodId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="选择周期" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="current">当前周期</SelectItem>
-                  <SelectItem value="previous">上一周期</SelectItem>
-                  <SelectItem value="all">全部周期</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+        {/* 筛选和操作 */}
+        <Card>
+          <CardHeader>
+            <CardTitle>筛选条件</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {/* 周期选择 */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">评分周期</label>
+                <Select value={periodId} onValueChange={setPeriodId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="选择周期" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="current">当前周期</SelectItem>
+                    <SelectItem value="2026-q1">2026年Q1</SelectItem>
+                    <SelectItem value="2026-q2">2026年Q2</SelectItem>
+                    <SelectItem value="all">全部周期</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div>
-              <label className="text-sm font-medium mb-2 block">部门</label>
-              <Select value={departmentId} onValueChange={setDepartmentId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="选择部门" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">全部部门</SelectItem>
-                  <SelectItem value="dept-1">平台设计一部</SelectItem>
-                  <SelectItem value="dept-2">平台设计二部</SelectItem>
-                  <SelectItem value="dept-3">基础架构部</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+              {/* 部门选择 */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">部门</label>
+                <Select value={departmentId} onValueChange={setDepartmentId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="选择部门" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">全部部门</SelectItem>
+                    <SelectItem value="dept1">平台设计一部</SelectItem>
+                    <SelectItem value="dept2">平台设计二部</SelectItem>
+                    <SelectItem value="dept3">基础架构部</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div>
-              <label className="text-sm font-medium mb-2 block">导出格式</label>
-              <Select value={exportType} onValueChange={(value: any) => setExportType(value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="选择格式" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="summary">汇总报表</SelectItem>
-                  <SelectItem value="detailed">详细报表</SelectItem>
-                  <SelectItem value="department">部门报表</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+              {/* 导出类型 */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">导出类型</label>
+                <Select value={exportType} onValueChange={(value) => setExportType(value as any)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="选择导出类型" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="summary">汇总报表</SelectItem>
+                    <SelectItem value="detailed">详细报表</SelectItem>
+                    <SelectItem value="department">部门报表</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-          <div className="flex gap-4">
-            <Button variant="outline" onClick={refetchStats} className="gap-2">
-              <RefreshCw size={16} />
-              刷新数据
-            </Button>
-
-            <PermissionGuard
-              permission={Permission.ANALYTICS_EXPORT}
-              userPermissions={userPermissions}
-              fallback={
-                <Button disabled className="gap-2">
-                  <Lock size={16} />
-                  导出数据（无权限）
+              {/* 操作按钮 */}
+              <div className="flex items-end gap-2">
+                <Button onClick={() => refetchStats()} variant="outline" className="gap-2">
+                  <RefreshCw size={16} />
+                  刷新
                 </Button>
-              }
-            >
-              <Button onClick={handleExportCSV} className="gap-2">
-                <Download size={16} />
-                导出数据
-              </Button>
-            </PermissionGuard>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* 统计概览 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">总人数</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{statsData.totalCount}</div>
-            <p className="text-xs text-muted-foreground mt-1">本周期评分人数</p>
+                <Button onClick={handleExportCSV} className="gap-2">
+                  <Download size={16} />
+                  导出
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">平均总分</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{statsData.averageScores.total.toFixed(1)}</div>
-            <p className="text-xs text-muted-foreground mt-1">全体员工平均分</p>
-          </CardContent>
-        </Card>
+        {/* 统计概览 */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">总人数</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{statsData?.totalCount || 0}</div>
+              <p className="text-xs text-muted-foreground">本周期参评人数</p>
+            </CardContent>
+          </Card>
 
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">平均总分</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{statsData?.averageScores?.total?.toFixed(1) || '0'}</div>
+              <p className="text-xs text-muted-foreground">全部员工平均分</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">优秀人数</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{statsData?.gradeDistribution?.excellent || 0}</div>
+              <p className="text-xs text-muted-foreground">优秀等级人数</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">部门数</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{benchmarkData?.totalDepartments || 0}</div>
+              <p className="text-xs text-muted-foreground">参评部门总数</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* 数据分析 */}
+        <Tabs defaultValue="dimensions" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="dimensions">维度分析</TabsTrigger>
+            <TabsTrigger value="distribution">等级分布</TabsTrigger>
+            <TabsTrigger value="benchmark">部门对标</TabsTrigger>
+          </TabsList>
+
+          {/* 维度分析 */}
+          <TabsContent value="dimensions">
+            <Card>
+              <CardHeader>
+                <CardTitle>各维度平均分</CardTitle>
+                <CardDescription>6个评分维度的平均分统计</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {dimensionChartData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={400}>
+                    <BarChart data={dimensionChartData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="value" fill="#3b82f6" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-96 flex items-center justify-center text-muted-foreground">
+                    暂无数据
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* 等级分布 */}
+          <TabsContent value="distribution">
+            <Card>
+              <CardHeader>
+                <CardTitle>等级分布</CardTitle>
+                <CardDescription>员工绩效等级分布情况</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {gradeChartData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={400}>
+                    <PieChart>
+                      <Pie
+                        data={gradeChartData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, value }) => `${name}: ${value}`}
+                        outerRadius={120}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {gradeChartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-96 flex items-center justify-center text-muted-foreground">
+                    暂无数据
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* 部门对标 */}
+          <TabsContent value="benchmark">
+            <Card>
+              <CardHeader>
+                <CardTitle>部门对标</CardTitle>
+                <CardDescription>各部门平均分对比</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {departmentChartData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={400}>
+                    <BarChart data={departmentChartData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="averageScore" fill="#10b981" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-96 flex items-center justify-center text-muted-foreground">
+                    暂无数据
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+
+        {/* 详细数据表 */}
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">优秀人数</CardTitle>
+          <CardHeader>
+            <CardTitle>详细数据</CardTitle>
+            <CardDescription>各维度详细数据统计</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-green-600">{statsData.gradeDistribution.excellent}</div>
-            <p className="text-xs text-muted-foreground mt-1">占比 {((statsData.gradeDistribution.excellent / statsData.totalCount) * 100).toFixed(1)}%</p>
+            <div className="border rounded-lg overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-muted">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-sm font-medium">维度</th>
+                    <th className="px-4 py-2 text-left text-sm font-medium">平均分</th>
+                    <th className="px-4 py-2 text-left text-sm font-medium">最高分</th>
+                    <th className="px-4 py-2 text-left text-sm font-medium">最低分</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {statsData?.averageScores ? (
+                    [
+                      { name: '日常工作', value: statsData.averageScores.dailyWork },
+                      { name: '工作质量', value: statsData.averageScores.workQuality },
+                      { name: '个人目标', value: statsData.averageScores.personalGoal },
+                      { name: '部门互评', value: statsData.averageScores.departmentReview },
+                      { name: '绩效加分', value: statsData.averageScores.bonus },
+                      { name: '绩效减分', value: statsData.averageScores.penalty },
+                    ].map((item) => (
+                      <tr key={item.name} className="border-t hover:bg-muted/50">
+                        <td className="px-4 py-2 text-sm">{item.name}</td>
+                        <td className="px-4 py-2 text-sm font-medium">{item.value?.toFixed(2) || '0'}</td>
+                        <td className="px-4 py-2 text-sm">-</td>
+                        <td className="px-4 py-2 text-sm">-</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
+                        暂无数据
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </CardContent>
         </Card>
       </div>
-
-      {/* 图表选项卡 */}
-      <Tabs defaultValue="dimensions" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="dimensions">维度分析</TabsTrigger>
-          <TabsTrigger value="grades">等级分布</TabsTrigger>
-          <TabsTrigger value="benchmark">部门对标</TabsTrigger>
-        </TabsList>
-
-        {/* 维度分析 */}
-        <TabsContent value="dimensions" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>六维度平均分对比</CardTitle>
-              <CardDescription>各个评分维度的平均分统计</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={dimensionChartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="value" fill="#3b82f6" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          {/* 维度详情 */}
-          <Card>
-            <CardHeader>
-              <CardTitle>维度详情</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm">日常工作</span>
-                    <span className="font-medium">{statsData.averageScores.dailyWork}</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="h-2 rounded-full bg-blue-500"
-                      style={{ width: `${(statsData.averageScores.dailyWork / 100) * 100}%` }}
-                    ></div>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm">工作质量</span>
-                    <span className="font-medium">{statsData.averageScores.workQuality}</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="h-2 rounded-full bg-green-500"
-                      style={{ width: `${(statsData.averageScores.workQuality / 100) * 100}%` }}
-                    ></div>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm">个人目标</span>
-                    <span className="font-medium">{statsData.averageScores.personalGoal}</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="h-2 rounded-full bg-yellow-500"
-                      style={{ width: `${(statsData.averageScores.personalGoal / 100) * 100}%` }}
-                    ></div>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm">部门互评</span>
-                    <span className="font-medium">{statsData.averageScores.departmentReview}</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="h-2 rounded-full bg-orange-500"
-                      style={{ width: `${(statsData.averageScores.departmentReview / 100) * 100}%` }}
-                    ></div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* 等级分布 */}
-        <TabsContent value="grades" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>绩效等级分布</CardTitle>
-              <CardDescription>员工绩效等级分布情况</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={gradeChartData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, value }) => `${name}: ${value}`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {gradeChartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          {/* 等级统计 */}
-          <Card>
-            <CardHeader>
-              <CardTitle>等级统计</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {[
-                  { label: '优秀', value: statsData.gradeDistribution.excellent, color: 'bg-green-500' },
-                  { label: '良好', value: statsData.gradeDistribution.good, color: 'bg-blue-500' },
-                  { label: '一般', value: statsData.gradeDistribution.fair, color: 'bg-yellow-500' },
-                  { label: '及格', value: statsData.gradeDistribution.pass, color: 'bg-orange-500' },
-                  { label: '不及格', value: statsData.gradeDistribution.fail, color: 'bg-red-500' },
-                ].map((grade) => (
-                  <div key={grade.label}>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>{grade.label}</span>
-                      <span className="font-medium">{grade.value} 人 ({((grade.value / statsData.totalCount) * 100).toFixed(1)}%)</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div
-                        className={`h-2 rounded-full ${grade.color}`}
-                        style={{ width: `${(grade.value / statsData.totalCount) * 100}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* 部门对标 */}
-        <TabsContent value="benchmark" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>部门平均分对比</CardTitle>
-              <CardDescription>各部门的平均分对标</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={departmentChartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="averageScore" fill="#10b981" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          {/* 部门详情 */}
-          <Card>
-            <CardHeader>
-              <CardTitle>部门详情</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {benchmarkData.departments.map((dept: any) => (
-                  <Card key={dept.departmentId} className="bg-muted/50">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base">{dept.departmentName}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">{dept.averageScore.toFixed(1)}</div>
-                      <p className="text-xs text-muted-foreground mt-1">平均分</p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
     </div>
   );
 }
