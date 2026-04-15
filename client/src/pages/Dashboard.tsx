@@ -3,7 +3,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { BarChart3, TrendingUp, Users, FileText, CheckCircle2, Clock, AlertCircle } from "lucide-react";
+import { BarChart3, TrendingUp, Users, FileText, CheckCircle2, Clock, AlertCircle, PenTool } from "lucide-react";
+import { Link } from "wouter";
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("overview");
@@ -226,6 +227,16 @@ export default function Dashboard() {
                       <p className="text-xs text-muted-foreground">评分趋势、排名对比</p>
                     </div>
                   </div>
+
+                  <Link href="/performance-registration">
+                    <div className="flex items-start gap-3 p-3 bg-indigo-50 rounded-lg border border-indigo-200 cursor-pointer hover:bg-indigo-100 transition-colors">
+                      <PenTool className="h-5 w-5 text-indigo-600 mt-0.5" />
+                      <div>
+                        <h4 className="font-medium text-sm">绩效登记</h4>
+                        <p className="text-xs text-muted-foreground">填写个人绩效数据</p>
+                      </div>
+                    </div>
+                  </Link>
                 </div>
               </CardContent>
             </Card>
