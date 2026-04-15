@@ -2,13 +2,15 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, TrendingUp, Trash2, Save } from "lucide-react";
+import { Plus, TrendingUp, Trash2, Save, Copy } from "lucide-react";
 import { toast } from "sonner";
 import PeriodSelector from "@/components/PeriodSelector";
 import {
   AssessmentPeriod,
   ASSESSMENT_PERIODS,
   getPerformanceDataForPeriod,
+  copyPreviousPeriodData,
+  getPreviousPeriod,
   ObjectiveItem,
   QualityMetric,
   PerformanceItem,
@@ -75,6 +77,29 @@ export default function PerformanceRegistration() {
     toast.success("绩效数据已提交");
   };
 
+  const handleCopyPreviousData = () => {
+    const previousPeriod = getPreviousPeriod(selectedPeriod.id);
+    
+    if (!previousPeriod) {
+      toast.error("没有上月数据可复制");
+      return;
+    }
+
+    const copiedData = copyPreviousPeriodData(selectedPeriod.id);
+    
+    if (!copiedData) {
+      toast.error("复制失败，请重试");
+      return;
+    }
+
+    // 更新数据
+    setObjectives(copiedData.objectives);
+    setBonusItems(copiedData.bonusItems);
+    setPenaltyItems(copiedData.penaltyItems);
+    
+    toast.success(`已从${previousPeriod.name}复制数据`);
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-50 p-8 flex items-center justify-center">
@@ -95,18 +120,30 @@ export default function PerformanceRegistration() {
           onPeriodChange={setSelectedPeriod}
         />
 
-        {/* 预测分数卡 */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg p-6 text-white shadow-lg mb-8">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-sm opacity-90 mb-1">当前预测总分 (Forecast Score)</p>
-              <p className="text-5xl font-bold">{forecastScore}</p>
-            </div>
-            <div className="flex items-center gap-2 bg-white bg-opacity-20 rounded-lg px-3 py-2">
-              <TrendingUp className="w-4 h-4" />
-              <span className="text-sm font-semibold">高于上月 {scoreChange}%</span>
+        {/* 预测分数卡和操作按髪 */}
+        <div className="flex items-start gap-4 mb-8">
+          <div className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg p-6 text-white shadow-lg">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm opacity-90 mb-1">当前预测总分 (Forecast Score)</p>
+                <p className="text-5xl font-bold">{forecastScore}</p>
+              </div>
+              <div className="flex items-center gap-2 bg-white bg-opacity-20 rounded-lg px-3 py-2">
+                <TrendingUp className="w-4 h-4" />
+                <span className="text-sm font-semibold">高于上月 {scoreChange}%</span>
+              </div>
             </div>
           </div>
+          
+          {/* 一键复制上月数据按髪 */}
+          <Button
+            onClick={handleCopyPreviousData}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 h-auto py-6 px-4 rounded-lg shadow-lg flex flex-col items-center justify-center"
+          >
+            <Copy className="w-5 h-5" />
+            <span className="text-sm font-semibold">复制上月</span>
+            <span className="text-xs opacity-90">数据</span>
+          </Button>
         </div>
 
         {/* 个人月度目标 */}

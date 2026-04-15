@@ -443,3 +443,60 @@ export function getPerformanceDataForPeriod(periodId: string): PeriodPerformance
     ],
   };
 }
+
+
+/**
+ * 复制上月的绩效数据到当前月
+ * @param currentPeriodId 当前周期 ID
+ * @returns 复制后的绩效数据，如果是第一个月则返回 null
+ */
+export function copyPreviousPeriodData(currentPeriodId: string): PeriodPerformanceData | null {
+  const currentIndex = ASSESSMENT_PERIODS.findIndex((p) => p.id === currentPeriodId);
+
+  // 如果是第一个月，无法复制
+  if (currentIndex <= 0) {
+    return null;
+  }
+
+  const previousPeriod = ASSESSMENT_PERIODS[currentIndex - 1];
+  const previousData = getPerformanceDataForPeriod(previousPeriod.id);
+
+  // 复制数据，生成新的 ID
+  return {
+    periodId: currentPeriodId,
+    forecastScore: previousData.forecastScore,
+    scoreChange: 0, // 重置环比变化
+    objectives: previousData.objectives.map((obj) => ({
+      ...obj,
+      id: `obj_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      status: 'pending' as const, // 重置状态为待定
+    })),
+    qualityMetrics: previousData.qualityMetrics.map((metric) => ({
+      ...metric,
+      value: 0, // 重置数值为 0
+    })),
+    bonusItems: previousData.bonusItems.map((item) => ({
+      ...item,
+      id: `b_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    })),
+    penaltyItems: previousData.penaltyItems.map((item) => ({
+      ...item,
+      id: `p_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    })),
+  };
+}
+
+/**
+ * 获取上月的周期信息
+ * @param currentPeriodId 当前周期 ID
+ * @returns 上月的周期信息，如果是第一个月则返回 null
+ */
+export function getPreviousPeriod(currentPeriodId: string): AssessmentPeriod | null {
+  const currentIndex = ASSESSMENT_PERIODS.findIndex((p) => p.id === currentPeriodId);
+
+  if (currentIndex <= 0) {
+    return null;
+  }
+
+  return ASSESSMENT_PERIODS[currentIndex - 1];
+}
