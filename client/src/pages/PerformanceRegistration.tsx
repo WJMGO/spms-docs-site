@@ -19,7 +19,19 @@ import {
   savePerformanceDataToStorage,
   getPerformanceDataFromStorage,
   exportPerformanceDataToExcel,
+  restorePerformanceDataFromStorage,
+  getStoredDataSavedTime,
+  clearPerformanceDataFromStorage,
 } from "@/lib/performance-storage";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function PerformanceRegistration() {
   // 获取当前周期（12月）
@@ -33,6 +45,8 @@ export default function PerformanceRegistration() {
   const [bonusItems, setBonusItems] = useState<PerformanceItem[]>([]);
   const [penaltyItems, setPenaltyItems] = useState<PerformanceItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [showRestoreDialog, setShowRestoreDialog] = useState(false);
+  const [restoredDataTime, setRestoredDataTime] = useState<string | null>(null);
 
   // 当周期改变时，加载对应的数据
   useEffect(() => {
@@ -46,6 +60,14 @@ export default function PerformanceRegistration() {
       setQualityMetrics(periodData.qualityMetrics);
       setBonusItems(periodData.bonusItems);
       setPenaltyItems(periodData.penaltyItems);
+      
+      // 检查是否存在暂存数据
+      const savedTime = getStoredDataSavedTime(selectedPeriod.id);
+      if (savedTime) {
+        setRestoredDataTime(savedTime);
+        setShowRestoreDialog(true);
+      }
+      
       setIsLoading(false);
     }, 300);
   }, [selectedPeriod]);
@@ -105,6 +127,37 @@ export default function PerformanceRegistration() {
     toast.success(`已从${previousPeriod.name}复制数据`);
   };
 
+  // 恢复暂存数据
+  const handleRestoreData = () => {
+    const restoredData = restorePerformanceDataFromStorage(selectedPeriod.id, {
+      periodId: selectedPeriod.id,
+      forecastScore,
+      scoreChange,
+      objectives,
+      qualityMetrics,
+      bonusItems,
+      penaltyItems,
+    });
+    
+    if (restoredData) {
+      setForecastScore(restoredData.forecastScore);
+      setScoreChange(restoredData.scoreChange);
+      setObjectives(restoredData.objectives);
+      setQualityMetrics(restoredData.qualityMetrics);
+      setBonusItems(restoredData.bonusItems);
+      setPenaltyItems(restoredData.penaltyItems);
+      setShowRestoreDialog(false);
+      toast.success('数据已恢复！');
+    }
+  };
+  
+  // 放弃恢复，清除暂存数据
+  const handleDiscardData = () => {
+    clearPerformanceDataFromStorage(selectedPeriod.id);
+    setShowRestoreDialog(false);
+    toast.info('已放弃恢复暂存数据');
+  };
+
   const handleSaveDraft = () => {
     try {
       const performanceData = {
@@ -154,6 +207,25 @@ export default function PerformanceRegistration() {
 
   return (
     <div className="min-h-screen bg-slate-50 p-8">
+      <AlertDialog open={showRestoreDialog} onOpenChange={setShowRestoreDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>恢复暂存数据</AlertDialogTitle>
+            <AlertDialogDescription>
+              检测到本周期的暂存数据（保存于 {restoredDataTime ? new Date(restoredDataTime).toLocaleString('zh-CN') : '未知'}）。是否要恢复这些暂存数据？
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex gap-3 justify-end">
+            <AlertDialogCancel onClick={handleDiscardData}>
+              放弃
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleRestoreData} className="bg-blue-600 hover:bg-blue-700">
+              恢复暂存数据
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
+      
       <div className="max-w-6xl mx-auto">
         {/* 周期选择器 */}
         <PeriodSelector

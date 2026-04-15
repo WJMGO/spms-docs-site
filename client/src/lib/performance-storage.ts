@@ -69,6 +69,53 @@ export function hasStoredPerformanceData(periodId: string): boolean {
 }
 
 /**
+ * 恢复暂存数据（合并当前数据和暂存数据）
+ * @param periodId 周期 ID
+ * @param currentData 当前数据
+ * @returns 合并后的数据
+ */
+export function restorePerformanceDataFromStorage(
+  periodId: string,
+  currentData: PeriodPerformanceData
+): PeriodPerformanceData | null {
+  try {
+    const storedData = getPerformanceDataFromStorage(periodId);
+    if (!storedData) {
+      return null;
+    }
+
+    // 合并数据：暂存数据优先级高
+    return {
+      periodId: storedData.periodId,
+      forecastScore: storedData.forecastScore || currentData.forecastScore,
+      scoreChange: storedData.scoreChange || currentData.scoreChange,
+      objectives: storedData.objectives || currentData.objectives,
+      qualityMetrics: storedData.qualityMetrics || currentData.qualityMetrics,
+      bonusItems: storedData.bonusItems || currentData.bonusItems,
+      penaltyItems: storedData.penaltyItems || currentData.penaltyItems,
+    };
+  } catch (error) {
+    console.error('Failed to restore performance data from storage:', error);
+    return null;
+  }
+}
+
+/**
+ * 获取暂存数据的保存时间
+ * @param periodId 周期 ID
+ * @returns 保存时间，如果不存在则返回 null
+ */
+export function getStoredDataSavedTime(periodId: string): string | null {
+  try {
+    const storedData = getPerformanceDataFromStorage(periodId);
+    return storedData?.savedAt || null;
+  } catch (error) {
+    console.error('Failed to get stored data saved time:', error);
+    return null;
+  }
+}
+
+/**
  * 导出绩效数据为 Excel
  * @param data 绩效数据
  * @param periodName 周期名称
