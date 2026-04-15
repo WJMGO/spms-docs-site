@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, TrendingUp, Trash2, Save, Copy } from "lucide-react";
+import { Plus, TrendingUp, Trash2, Save, Copy, Download } from "lucide-react";
 import { toast } from "sonner";
 import PeriodSelector from "@/components/PeriodSelector";
 import {
@@ -15,6 +15,11 @@ import {
   QualityMetric,
   PerformanceItem,
 } from "../../../shared/assessment-periods";
+import {
+  savePerformanceDataToStorage,
+  getPerformanceDataFromStorage,
+  exportPerformanceDataToExcel,
+} from "@/lib/performance-storage";
 
 export default function PerformanceRegistration() {
   // 获取当前周期（12月）
@@ -98,6 +103,42 @@ export default function PerformanceRegistration() {
     setPenaltyItems(copiedData.penaltyItems);
     
     toast.success(`已从${previousPeriod.name}复制数据`);
+  };
+
+  const handleSaveDraft = () => {
+    try {
+      const performanceData = {
+        periodId: selectedPeriod.id,
+        forecastScore,
+        scoreChange,
+        objectives,
+        qualityMetrics,
+        bonusItems,
+        penaltyItems,
+      };
+      savePerformanceDataToStorage(selectedPeriod.id, performanceData);
+      toast.success("数据已暂存，下次登录时可恢复");
+    } catch (error) {
+      toast.error("暂存失败，请重试");
+    }
+  };
+
+  const handleExportExcel = async () => {
+    try {
+      const performanceData = {
+        periodId: selectedPeriod.id,
+        forecastScore,
+        scoreChange,
+        objectives,
+        qualityMetrics,
+        bonusItems,
+        penaltyItems,
+      };
+      await exportPerformanceDataToExcel(performanceData, selectedPeriod.name);
+      toast.success("数据已导出为 Excel");
+    } catch (error) {
+      toast.error("导出失败，请重试");
+    }
   };
 
   if (isLoading) {
@@ -343,7 +384,23 @@ export default function PerformanceRegistration() {
               />
             </div>
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-3 flex-wrap">
+            <Button
+              onClick={handleSaveDraft}
+              variant="outline"
+              className="gap-2 bg-amber-50 hover:bg-amber-100 border-amber-200"
+            >
+              <Save className="w-4 h-4" />
+              暂存
+            </Button>
+            <Button
+              onClick={handleExportExcel}
+              variant="outline"
+              className="gap-2 bg-green-50 hover:bg-green-100 border-green-200"
+            >
+              <Download className="w-4 h-4" />
+              导出 Excel
+            </Button>
             <Button
               onClick={handleSave}
               variant="outline"
@@ -354,7 +411,7 @@ export default function PerformanceRegistration() {
             </Button>
             <Button
               onClick={handleSubmit}
-              className="bg-blue-600 hover:bg-blue-700 text-white gap-2"
+              className="bg-blue-600 hover:bg-blue-700 text-white gap-2 ml-auto"
             >
               提交并转管理交 →
             </Button>
