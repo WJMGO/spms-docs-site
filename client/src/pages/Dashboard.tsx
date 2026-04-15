@@ -1,337 +1,358 @@
 import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { BarChart3, TrendingUp, Users, FileText, CheckCircle2, Clock, AlertCircle, PenTool } from "lucide-react";
+import { Search, Bell, Settings, Menu, X, TrendingUp, Download, ChevronRight, Users } from "lucide-react";
 import { Link } from "wouter";
 
 export default function Dashboard() {
-  const [activeTab, setActiveTab] = useState("overview");
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [selectedQuarter, setSelectedQuarter] = useState("Q3");
 
-  // 模拟数据
-  const stats = {
-    totalAssessments: 156,
-    completedAssessments: 98,
-    pendingAssessments: 35,
-    rejectedAssessments: 23,
-    averageScore: 82.5,
-    completionRate: 62.8,
-  };
-
-  const recentAssessments = [
+  // 模拟排名数据
+  const rankingData = [
     {
-      id: 1,
-      employeeName: "张三",
-      department: "技术部",
-      period: "2026年3月",
-      status: "approved",
-      score: 85.5,
-      date: "2026-03-30",
+      rank: 1,
+      name: "张秋实",
+      department: "研究中心 / 架构",
+      jan: 94.5,
+      feb: 96.0,
+      mar: 98.0,
+      quarterAvg: 96.17,
+      coefficient: 1.05,
+      finalScore: 101.0,
     },
     {
-      id: 2,
-      employeeName: "李四",
-      department: "产品部",
-      period: "2026年3月",
-      status: "submitted",
-      score: null,
-      date: "2026-03-29",
+      rank: 2,
+      name: "王伟",
+      department: "市场部 / 品牌组",
+      jan: 92.0,
+      feb: 95.0,
+      mar: 93.5,
+      quarterAvg: 93.5,
+      coefficient: 1.02,
+      finalScore: 95.37,
     },
     {
-      id: 3,
-      employeeName: "王五",
-      department: "技术部",
-      period: "2026年3月",
-      status: "draft",
-      score: null,
-      date: "2026-03-28",
+      rank: 3,
+      name: "李璿",
+      department: "销售部 / 华东区",
+      jan: 90.0,
+      feb: 91.5,
+      mar: 96.0,
+      quarterAvg: 92.5,
+      coefficient: 1.0,
+      finalScore: 92.5,
     },
     {
-      id: 4,
-      employeeName: "赵六",
-      department: "运营部",
-      period: "2026年3月",
-      status: "rejected",
-      score: 72.0,
-      date: "2026-03-27",
+      rank: 4,
+      name: "刘洋",
+      department: "人力资源 / 绩效",
+      jan: 88.5,
+      feb: 90.0,
+      mar: 92.0,
+      quarterAvg: 90.17,
+      coefficient: 1.0,
+      finalScore: 90.17,
+    },
+    {
+      rank: 5,
+      name: "陈燕",
+      department: "客服部 / 大客户",
+      jan: 85.0,
+      feb: 88.0,
+      mar: 87.5,
+      quarterAvg: 86.83,
+      coefficient: 0.98,
+      finalScore: 85.09,
     },
   ];
 
-  const departmentStats = [
-    { name: "技术部", total: 45, completed: 32, average: 84.2 },
-    { name: "产品部", total: 38, completed: 24, average: 81.5 },
-    { name: "运营部", total: 35, completed: 22, average: 79.8 },
-    { name: "市场部", total: 28, completed: 15, average: 80.3 },
-    { name: "人力资源部", total: 10, completed: 5, average: 83.0 },
+  const navigationItems = [
+    { id: "overview", label: "绩效汇总", icon: "📊" },
+    { id: "monthly", label: "月度绩效评定工作台", icon: "📋" },
+    { id: "rules", label: "绩效频则", icon: "⚙️" },
   ];
 
-  const getStatusBadge = (status: string) => {
-    const statusMap: Record<string, { label: string; variant: string; color: string }> = {
-      approved: { label: "已批准", variant: "default", color: "bg-green-100 text-green-800" },
-      submitted: { label: "已提交", variant: "outline", color: "bg-blue-100 text-blue-800" },
-      draft: { label: "草稿", variant: "secondary", color: "bg-gray-100 text-gray-800" },
-      rejected: { label: "已拒绝", variant: "destructive", color: "bg-red-100 text-red-800" },
-    };
-
-    const statusInfo = statusMap[status] || statusMap.draft;
-    return (
-      <Badge className={statusInfo.color}>
-        {statusInfo.label}
-      </Badge>
-    );
-  };
+  const topNavItems = [
+    { label: "绩效汇总", active: true },
+    { label: "当月绩效" },
+    { label: "历史月度绩效" },
+    { label: "历史季度绩效" },
+    { label: "全年绩效" },
+  ];
 
   return (
-    <div className="min-h-screen bg-background p-8">
-      <div className="max-w-7xl mx-auto">
-        {/* 页面标题 */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-foreground mb-2">绩效管理系统</h1>
-          <p className="text-muted-foreground">
-            SPMS - System Software Performance Management System
-          </p>
+    <div className="min-h-screen bg-slate-50">
+      {/* 顶部导航栏 */}
+      <header className="bg-white border-b border-slate-200">
+        <div className="px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-8">
+            {/* 品牌标题 */}
+            <div className="flex items-center gap-2">
+              <div className="text-2xl font-bold text-blue-900">Architectural Ledger</div>
+              <div className="text-xs text-slate-500 font-medium">ENTERPRISE PERFORMANCE</div>
+            </div>
+
+            {/* 横向导航条目 */}
+            <nav className="hidden md:flex gap-8">
+              {topNavItems.map((item) => (
+                <button
+                  key={item.label}
+                  className={`text-sm font-medium pb-2 border-b-2 transition-colors ${
+                    item.active
+                      ? "text-blue-900 border-blue-900"
+                      : "text-slate-600 border-transparent hover:text-slate-900"
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </nav>
+          </div>
+
+          {/* 操作按钮 */}
+          <div className="flex items-center gap-4">
+            <button className="p-2 hover:bg-slate-100 rounded-md">
+              <Search size={20} className="text-slate-600" />
+            </button>
+            <button className="p-2 hover:bg-slate-100 rounded-md">
+              <Bell size={20} className="text-slate-600" />
+            </button>
+            <button className="p-2 hover:bg-slate-100 rounded-md">
+              <Settings size={20} className="text-slate-600" />
+            </button>
+          </div>
         </div>
+      </header>
 
-        {/* 统计卡片 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">总评分数</CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalAssessments}</div>
-              <p className="text-xs text-muted-foreground">本周期评分总数</p>
-            </CardContent>
-          </Card>
+      <div className="flex">
+        {/* 左侧侧边栏 */}
+        <aside
+          className={`${
+            sidebarOpen ? "w-64" : "w-0"
+          } transition-all duration-300 bg-slate-100 overflow-hidden`}
+        >
+          <div className="p-6">
+            <h2 className="text-lg font-bold text-blue-900 mb-6">绩效汇总</h2>
+            <nav className="space-y-2">
+              {navigationItems.map((item) => (
+                <button
+                  key={item.id}
+                  className="w-full text-left px-4 py-3 rounded-md text-slate-700 hover:bg-slate-200 transition-colors flex items-center gap-3"
+                >
+                  <span>{item.icon}</span>
+                  <span className="text-sm font-medium">{item.label}</span>
+                </button>
+              ))}
+            </nav>
+          </div>
+        </aside>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">已完成</CardTitle>
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.completedAssessments}</div>
-              <p className="text-xs text-muted-foreground">已批准或提交</p>
-            </CardContent>
-          </Card>
+        {/* 主内容区域 */}
+        <main className="flex-1 p-8">
+          {/* 侧边栏切换按钮 */}
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="mb-4 p-2 hover:bg-slate-200 rounded-md md:hidden"
+          >
+            {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">待处理</CardTitle>
-              <Clock className="h-4 w-4 text-yellow-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.pendingAssessments}</div>
-              <p className="text-xs text-muted-foreground">草稿或待审批</p>
-            </CardContent>
-          </Card>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* 左侧主内容 */}
+            <div className="lg:col-span-2 space-y-8">
+              {/* 季度概览标题 */}
+              <div>
+                <h1 className="text-3xl font-bold text-blue-900 mb-2">季度绩效概览</h1>
+                <p className="text-slate-600 text-sm">
+                  基于 2023 年第 3 季度的绩效指标评估，旨在现阶段各层级的战略对齐程度与扣分度与执行力产出。
+                </p>
+              </div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">平均分</CardTitle>
-              <TrendingUp className="h-4 w-4 text-blue-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.averageScore}</div>
-              <p className="text-xs text-muted-foreground">本周期平均评分</p>
-            </CardContent>
-          </Card>
-        </div>
+              {/* 统计数据卡 */}
+              <div className="grid grid-cols-3 gap-4">
+                <Card className="bg-white border-0 shadow-sm">
+                  <CardContent className="pt-6">
+                    <div className="text-slate-600 text-sm mb-2">平均得分</div>
+                    <div className="text-3xl font-bold text-blue-900">92.4</div>
+                    <div className="text-xs text-slate-500 mt-2">/ 100</div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-white border-0 shadow-sm">
+                  <CardContent className="pt-6">
+                    <div className="text-slate-600 text-sm mb-2">完成率</div>
+                    <div className="text-3xl font-bold text-blue-900">98.2%</div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-white border-0 shadow-sm">
+                  <CardContent className="pt-6">
+                    <div className="text-slate-600 text-sm mb-2">参评人数</div>
+                    <div className="text-3xl font-bold text-blue-900">1,248</div>
+                  </CardContent>
+                </Card>
+              </div>
 
-        {/* 标签页 */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="overview">概览</TabsTrigger>
-            <TabsTrigger value="assessments">最近评分</TabsTrigger>
-            <TabsTrigger value="departments">部门统计</TabsTrigger>
-          </TabsList>
-
-          {/* 概览标签页 */}
-          <TabsContent value="overview" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>评分进度</CardTitle>
-                <CardDescription>本周期评分完成情况</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">完成率</span>
-                    <span className="text-sm font-bold">{stats.completionRate}%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-green-600 h-2 rounded-full transition-all"
-                      style={{ width: `${stats.completionRate}%` }}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 mt-6">
-                  <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                    <div className="flex items-center gap-2 mb-2">
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      <span className="text-sm font-medium">已批准</span>
-                    </div>
-                    <div className="text-2xl font-bold text-green-600">{stats.completedAssessments}</div>
-                  </div>
-
-                  <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Clock className="h-4 w-4 text-yellow-600" />
-                      <span className="text-sm font-medium">待处理</span>
-                    </div>
-                    <div className="text-2xl font-bold text-yellow-600">{stats.pendingAssessments}</div>
+              {/* 排名表格 */}
+              <div className="bg-white rounded-lg p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-lg font-bold text-blue-900 flex items-center gap-2">
+                    <Users size={20} />
+                    2023年第3季度个人绩效名单表
+                  </h2>
+                  <div className="flex gap-2">
+                    <button className="px-4 py-2 text-sm text-blue-900 hover:bg-slate-100 rounded-md">
+                      筛选
+                    </button>
+                    <button className="px-4 py-2 text-sm bg-blue-900 text-white hover:bg-blue-800 rounded-md flex items-center gap-2">
+                      <Download size={16} />
+                      导出数据
+                    </button>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>系统功能</CardTitle>
-                <CardDescription>已实现的核心功能模块</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                    <FileText className="h-5 w-5 text-blue-600 mt-0.5" />
+                {/* 表格 */}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-slate-100 border-b border-slate-200">
+                        <th className="px-4 py-3 text-left font-medium text-slate-700">排名</th>
+                        <th className="px-4 py-3 text-left font-medium text-slate-700">员工信息</th>
+                        <th className="px-4 py-3 text-left font-medium text-slate-700">所属部门</th>
+                        <th className="px-4 py-3 text-right font-medium text-slate-700">1月分</th>
+                        <th className="px-4 py-3 text-right font-medium text-slate-700">2月分</th>
+                        <th className="px-4 py-3 text-right font-medium text-slate-700">3月分</th>
+                        <th className="px-4 py-3 text-right font-medium text-slate-700">季度平均</th>
+                        <th className="px-4 py-3 text-right font-medium text-slate-700">加权系数</th>
+                        <th className="px-4 py-3 text-right font-medium text-slate-700">最终得分</th>
+                        <th className="px-4 py-3 text-center font-medium text-slate-700">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rankingData.map((row, idx) => (
+                        <tr
+                          key={row.rank}
+                          className={`border-b border-slate-100 ${
+                            idx % 2 === 0 ? "bg-white" : "bg-slate-50"
+                          } hover:bg-slate-100 transition-colors`}
+                        >
+                          <td className="px-4 py-4 text-center">
+                            <Badge className="bg-blue-100 text-blue-900">{row.rank}</Badge>
+                          </td>
+                          <td className="px-4 py-4 font-medium text-slate-900">{row.name}</td>
+                          <td className="px-4 py-4 text-slate-600">{row.department}</td>
+                          <td className="px-4 py-4 text-right text-slate-900">{row.jan}</td>
+                          <td className="px-4 py-4 text-right text-slate-900">{row.feb}</td>
+                          <td className="px-4 py-4 text-right text-slate-900">{row.mar}</td>
+                          <td className="px-4 py-4 text-right text-slate-900">{row.quarterAvg}</td>
+                          <td className="px-4 py-4 text-right text-slate-900">{row.coefficient}</td>
+                          <td className="px-4 py-4 text-right font-bold text-blue-900">{row.finalScore}</td>
+                          <td className="px-4 py-4 text-center">
+                            <button className="text-blue-900 hover:text-blue-700 text-sm font-medium">
+                              详情
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* 分页 */}
+                <div className="mt-6 flex items-center justify-between">
+                  <div className="text-sm text-slate-600">共 1248 名员工 1 页显示数据</div>
+                  <div className="flex gap-2">
+                    <button className="px-3 py-1 text-sm text-slate-600 hover:bg-slate-100 rounded">
+                      上一页
+                    </button>
+                    <button className="px-3 py-1 text-sm bg-blue-900 text-white rounded">1</button>
+                    <button className="px-3 py-1 text-sm text-slate-600 hover:bg-slate-100 rounded">
+                      2
+                    </button>
+                    <button className="px-3 py-1 text-sm text-slate-600 hover:bg-slate-100 rounded">
+                      3
+                    </button>
+                    <button className="px-3 py-1 text-sm text-slate-600 hover:bg-slate-100 rounded">
+                      下一页
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* 季度选择器 */}
+              <div className="flex gap-4 justify-center py-8">
+                {["Q1", "Q2", "Q3", "Q4"].map((q) => (
+                  <button
+                    key={q}
+                    onClick={() => setSelectedQuarter(q)}
+                    className={`px-6 py-2 rounded-md font-medium transition-colors ${
+                      selectedQuarter === q
+                        ? "bg-blue-900 text-white"
+                        : "bg-slate-200 text-slate-700 hover:bg-slate-300"
+                    }`}
+                  >
+                    {q}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 右侧信息卡 */}
+            <div className="space-y-6">
+              {/* Q3 FINALIST 卡 */}
+              <Card className="bg-gradient-to-br from-blue-900 to-blue-800 border-0 text-white">
+                <CardContent className="pt-6">
+                  <Badge className="bg-white text-blue-900 mb-4">Q3 FINALIST</Badge>
+                  <h3 className="text-xl font-bold mb-2">季度最佳绩效员工</h3>
+                  <p className="text-sm text-blue-100 mb-6">战略研究中心 - 张秋实</p>
+                  <Button className="w-full bg-white text-blue-900 hover:bg-slate-100">
+                    查看个人报告
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* 会员信息卡 */}
+              <Card className="bg-white border-0 shadow-sm">
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="w-12 h-12 bg-slate-300 rounded-full flex items-center justify-center">
+                      <span className="text-xl">👤</span>
+                    </div>
                     <div>
-                      <h4 className="font-medium text-sm">评分管理</h4>
-                      <p className="text-xs text-muted-foreground">创建、编辑、提交绩效评分</p>
+                      <div className="font-bold text-slate-900">管理员</div>
+                      <div className="text-xs text-slate-500">系统管理员</div>
                     </div>
                   </div>
+                </CardContent>
+              </Card>
 
-                  <div className="flex items-start gap-3 p-3 bg-green-50 rounded-lg border border-green-200">
-                    <BarChart3 className="h-5 w-5 text-green-600 mt-0.5" />
-                    <div>
-                      <h4 className="font-medium text-sm">数据分析</h4>
-                      <p className="text-xs text-muted-foreground">统计、分析、可视化报表</p>
+              {/* 管理建议 */}
+              <Card className="bg-white border-0 shadow-sm">
+                <CardContent className="pt-6">
+                  <h4 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
+                    <TrendingUp size={18} className="text-blue-900" />
+                    季度环比提升趋势
+                  </h4>
+                  <div className="space-y-3">
+                    <div className="text-sm text-slate-700">
+                      • 研究中心全体在在全部组织的平均绩效正在持续上升，建议作为绩效人才入库推荐。
+                    </div>
+                    <div className="text-sm text-slate-700">
+                      • 生生销售主任在3月业绩超过预期，建议在2月份的目标下设。
                     </div>
                   </div>
+                </CardContent>
+              </Card>
 
-                  <div className="flex items-start gap-3 p-3 bg-purple-50 rounded-lg border border-purple-200">
-                    <Users className="h-5 w-5 text-purple-600 mt-0.5" />
-                    <div>
-                      <h4 className="font-medium text-sm">员工管理</h4>
-                      <p className="text-xs text-muted-foreground">员工信息、部门管理</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3 p-3 bg-orange-50 rounded-lg border border-orange-200">
-                    <TrendingUp className="h-5 w-5 text-orange-600 mt-0.5" />
-                    <div>
-                      <h4 className="font-medium text-sm">趋势分析</h4>
-                      <p className="text-xs text-muted-foreground">评分趋势、排名对比</p>
-                    </div>
-                  </div>
-
-                  <Link href="/performance-registration">
-                    <div className="flex items-start gap-3 p-3 bg-indigo-50 rounded-lg border border-indigo-200 cursor-pointer hover:bg-indigo-100 transition-colors">
-                      <PenTool className="h-5 w-5 text-indigo-600 mt-0.5" />
-                      <div>
-                        <h4 className="font-medium text-sm">绩效登记</h4>
-                        <p className="text-xs text-muted-foreground">填写个人绩效数据</p>
-                      </div>
-                    </div>
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* 最近评分标签页 */}
-          <TabsContent value="assessments">
-            <Card>
-              <CardHeader>
-                <CardTitle>最近评分</CardTitle>
-                <CardDescription>最近提交的绩效评分记录</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {recentAssessments.map((assessment) => (
-                    <div
-                      key={assessment.id}
-                      className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-accent transition-colors"
-                    >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-1">
-                          <h4 className="font-medium">{assessment.employeeName}</h4>
-                          {getStatusBadge(assessment.status)}
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          {assessment.department} • {assessment.period}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        {assessment.score ? (
-                          <div className="text-2xl font-bold text-blue-600">{assessment.score}</div>
-                        ) : (
-                          <div className="text-sm text-muted-foreground">待评分</div>
-                        )}
-                        <p className="text-xs text-muted-foreground">{assessment.date}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* 部门统计标签页 */}
-          <TabsContent value="departments">
-            <Card>
-              <CardHeader>
-                <CardTitle>部门统计</CardTitle>
-                <CardDescription>各部门的评分情况统计</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {departmentStats.map((dept, index) => (
-                    <div key={index} className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-medium">{dept.name}</h4>
-                          <p className="text-xs text-muted-foreground">
-                            {dept.completed} / {dept.total} 已完成
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-lg font-bold text-blue-600">{dept.average}</div>
-                          <p className="text-xs text-muted-foreground">平均分</p>
-                        </div>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div
-                          className="bg-blue-600 h-2 rounded-full transition-all"
-                          style={{ width: `${(dept.completed / dept.total) * 100}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-
-        {/* 快速操作 */}
-        <div className="mt-8 flex gap-4">
-          <Button size="lg" className="gap-2">
-            <FileText className="h-4 w-4" />
-            新建评分
-          </Button>
-          <Button size="lg" variant="outline" className="gap-2">
-            <BarChart3 className="h-4 w-4" />
-            查看报表
-          </Button>
-          <Button size="lg" variant="outline" className="gap-2">
-            <Users className="h-4 w-4" />
-            管理员工
-          </Button>
-        </div>
+              {/* 查看完整诊断报告 */}
+              <Link href="/analytics">
+                <a className="flex items-center justify-center gap-2 text-blue-900 hover:text-blue-700 font-medium text-sm">
+                  查看完整诊断报告 <ChevronRight size={16} />
+                </a>
+              </Link>
+            </div>
+          </div>
+        </main>
       </div>
     </div>
   );
