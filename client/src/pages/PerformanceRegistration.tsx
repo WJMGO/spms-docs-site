@@ -1,108 +1,47 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plus, TrendingUp, Trash2, Save } from "lucide-react";
 import { toast } from "sonner";
-
-interface ObjectiveItem {
-  id: string;
-  type: "KPI" | "Task";
-  objective: string;
-  keyResult: string;
-  dueDate: string;
-  status: "completed" | "in-progress" | "pending";
-  score: number;
-}
-
-interface QualityMetric {
-  name: string;
-  icon: string;
-  value: number;
-  label: string;
-  code: string;
-}
-
-interface PerformanceItem {
-  id: string;
-  name: string;
-  description: string;
-  score: number;
-  type: "bonus" | "penalty";
-}
+import PeriodSelector from "@/components/PeriodSelector";
+import {
+  AssessmentPeriod,
+  ASSESSMENT_PERIODS,
+  getPerformanceDataForPeriod,
+  ObjectiveItem,
+  QualityMetric,
+  PerformanceItem,
+} from "../../../shared/assessment-periods";
 
 export default function PerformanceRegistration() {
-  const [objectives, setObjectives] = useState<ObjectiveItem[]>([
-    {
-      id: "1",
-      type: "KPI",
-      objective: "关键指标 (KPI)",
-      keyResult: "云原生架构迁移",
-      dueDate: "12-20",
-      status: "completed",
-      score: 45.0,
-    },
-    {
-      id: "2",
-      type: "Task",
-      objective: "关键要项 (Task)",
-      keyResult: "安全审计优化",
-      dueDate: "12-15",
-      status: "completed",
-      score: 30.0,
-    },
-  ]);
+  // 获取当前周期（12月）
+  const currentPeriod = ASSESSMENT_PERIODS.find((p) => p.isCurrentPeriod) || ASSESSMENT_PERIODS[11];
+  const [selectedPeriod, setSelectedPeriod] = useState<AssessmentPeriod>(currentPeriod);
 
-  const [qualityMetrics] = useState<QualityMetric[]>([
-    { name: "CODE REVIEW", code: "代码走查", icon: "🔍", value: 24, label: "代码走查次数" },
-    { name: "AUDIT", code: "审计", icon: "📋", value: 12, label: "代码审核通过" },
-    { name: "BUG DEFLECTION", code: "Bug打回率", icon: "🐛", value: 3, label: "Bug打回打回" },
-    { name: "DESIGN", code: "设计", icon: "🏗️", value: 8, label: "设计评审参与" },
-  ]);
+  const [forecastScore, setForecastScore] = useState(95.8);
+  const [scoreChange, setScoreChange] = useState(2.4);
+  const [objectives, setObjectives] = useState<ObjectiveItem[]>([]);
+  const [qualityMetrics, setQualityMetrics] = useState<QualityMetric[]>([]);
+  const [bonusItems, setBonusItems] = useState<PerformanceItem[]>([]);
+  const [penaltyItems, setPenaltyItems] = useState<PerformanceItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const [bonusItems, setBonusItems] = useState<PerformanceItem[]>([
-    {
-      id: "b1",
-      name: "培养新人",
-      description: "担任新人师傅，指导入职新人，并在月度用用期间进行",
-      score: 5.0,
-      type: "bonus",
-    },
-    {
-      id: "b2",
-      name: "技术分享",
-      description: "主讲《云原生安全架构》部门内技术分享，参与人数50+，评评率98%。",
-      score: 8.0,
-      type: "bonus",
-    },
-  ]);
-
-  const [penaltyItems, setPenaltyItems] = useState<PerformanceItem[]>([
-    {
-      id: "p1",
-      name: "技术失误",
-      description: "无",
-      score: 0.0,
-      type: "penalty",
-    },
-    {
-      id: "p2",
-      name: "管理失误",
-      description: "参与权限记录（1次）",
-      score: -0.5,
-      type: "penalty",
-    },
-    {
-      id: "p3",
-      name: "质量异常",
-      description: "无",
-      score: 0.0,
-      type: "penalty",
-    },
-  ]);
-
-  const [forecastScore] = useState(95.8);
-  const [scoreChange] = useState(2.4);
+  // 当周期改变时，加载对应的数据
+  useEffect(() => {
+    setIsLoading(true);
+    // 模拟异步加载数据
+    setTimeout(() => {
+      const periodData = getPerformanceDataForPeriod(selectedPeriod.id);
+      setForecastScore(periodData.forecastScore);
+      setScoreChange(periodData.scoreChange);
+      setObjectives(periodData.objectives);
+      setQualityMetrics(periodData.qualityMetrics);
+      setBonusItems(periodData.bonusItems);
+      setPenaltyItems(periodData.penaltyItems);
+      setIsLoading(false);
+    }, 300);
+  }, [selectedPeriod]);
 
   const objectiveScore = objectives.reduce((sum, obj) => sum + obj.score, 0);
   const bonusScore = bonusItems.reduce((sum, item) => sum + item.score, 0);
@@ -136,32 +75,36 @@ export default function PerformanceRegistration() {
     toast.success("绩效数据已提交");
   };
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 p-8 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-600">加载绩效数据中...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 p-8">
       <div className="max-w-6xl mx-auto">
-        {/* 顶部信息区 */}
-        <div className="mb-8">
-          <div className="flex items-start justify-between mb-6">
-            <div>
-              <h1 className="text-4xl font-bold text-slate-900 mb-2">12月绩效登记</h1>
-              <div className="flex items-center gap-2 text-slate-600">
-                <span>📅</span>
-                <span>考核周期: 11月26日 - 12月25日</span>
-              </div>
-            </div>
-          </div>
+        {/* 周期选择器 */}
+        <PeriodSelector
+          selectedPeriod={selectedPeriod}
+          onPeriodChange={setSelectedPeriod}
+        />
 
-          {/* 预测分数卡 */}
-          <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg p-6 text-white shadow-lg">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm opacity-90 mb-1">当预测总分 (Forecast Score)</p>
-                <p className="text-5xl font-bold">95.8</p>
-              </div>
-              <div className="flex items-center gap-2 bg-white bg-opacity-20 rounded-lg px-3 py-2">
-                <TrendingUp className="w-4 h-4" />
-                <span className="text-sm font-semibold">高于上月 2.4%</span>
-              </div>
+        {/* 预测分数卡 */}
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg p-6 text-white shadow-lg mb-8">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-sm opacity-90 mb-1">当前预测总分 (Forecast Score)</p>
+              <p className="text-5xl font-bold">{forecastScore}</p>
+            </div>
+            <div className="flex items-center gap-2 bg-white bg-opacity-20 rounded-lg px-3 py-2">
+              <TrendingUp className="w-4 h-4" />
+              <span className="text-sm font-semibold">高于上月 {scoreChange}%</span>
             </div>
           </div>
         </div>
@@ -198,8 +141,20 @@ export default function PerformanceRegistration() {
                       <td className="px-6 py-4 text-sm text-slate-600">{obj.keyResult}</td>
                       <td className="px-6 py-4 text-sm text-slate-600">{obj.dueDate}</td>
                       <td className="px-6 py-4 text-center">
-                        <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 rounded-full">
-                          已完成
+                        <Badge
+                          className={`rounded-full ${
+                            obj.status === "completed"
+                              ? "bg-blue-100 text-blue-700 hover:bg-blue-100"
+                              : obj.status === "in-progress"
+                              ? "bg-yellow-100 text-yellow-700 hover:bg-yellow-100"
+                              : "bg-gray-100 text-gray-700 hover:bg-gray-100"
+                          }`}
+                        >
+                          {obj.status === "completed"
+                            ? "已完成"
+                            : obj.status === "in-progress"
+                            ? "进行中"
+                            : "待定"}
                         </Badge>
                       </td>
                       <td className="px-6 py-4 text-right text-sm font-bold text-blue-600">
@@ -299,7 +254,11 @@ export default function PerformanceRegistration() {
                     </Button>
                   </div>
                   <div className="text-right">
-                    <span className={`text-2xl font-bold ${item.score < 0 ? "text-red-600" : "text-slate-600"}`}>
+                    <span
+                      className={`text-2xl font-bold ${
+                        item.score < 0 ? "text-red-600" : "text-slate-600"
+                      }`}
+                    >
                       {item.score > 0 ? "+" : ""}{item.score.toFixed(1)}
                     </span>
                   </div>
