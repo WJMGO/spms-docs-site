@@ -19,6 +19,7 @@ import HistoricalMonthlyPerformance from "./pages/HistoricalMonthlyPerformance";
 import HistoricalQuarterlyPerformance from "./pages/HistoricalQuarterlyPerformance";
 import AnnualPerformance from "./pages/AnnualPerformance";
 import PerformanceRules from "./pages/PerformanceRules";
+import MonthlyPerformanceWorkbench from "./pages/MonthlyPerformanceWorkbench";
 
 
 function Router() {
@@ -35,6 +36,7 @@ function Router() {
       <Route path={"/historical-quarterly"} component={HistoricalQuarterlyPerformance} />
       <Route path={"/annual-performance"} component={AnnualPerformance} />
       <Route path={"/performance-rules"} component={PerformanceRules} />
+      <Route path={"/monthly-workbench"} component={MonthlyPerformanceWorkbench} />
       <Route path={"/audit-logs"} component={AuditLogsPage} />
       <Route path={"/permissions"} component={PermissionsPage} />
       <Route path={"/test"} component={TestPage} />
