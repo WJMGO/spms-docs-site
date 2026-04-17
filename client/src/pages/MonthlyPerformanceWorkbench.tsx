@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Download, Filter, ChevronDown } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { ChevronLeft, ChevronRight, Download, Filter, ChevronDown, Search, ArrowUpDown } from 'lucide-react';
 import PerformanceLayout from '@/components/PerformanceLayout';
 
 interface EmployeePerformance {
@@ -82,186 +82,411 @@ const mockEmployees: EmployeePerformance[] = [
     deptRank: 0.98,
     finalScore: 85.09,
   },
+  {
+    rank: 6,
+    name: '李明',
+    department: '研究中心/架构',
+    firstLetter: '明',
+    avatarColor: 'bg-yellow-500',
+    jan: 89.0,
+    feb: 91.0,
+    mar: 90.5,
+    quarterAvg: 90.17,
+    deptRank: 0.95,
+    finalScore: 85.66,
+  },
+  {
+    rank: 7,
+    name: '王芳',
+    department: '市场部/品牌组',
+    firstLetter: '芳',
+    avatarColor: 'bg-pink-500',
+    jan: 87.0,
+    feb: 89.0,
+    mar: 88.5,
+    quarterAvg: 88.17,
+    deptRank: 0.92,
+    finalScore: 81.12,
+  },
+  {
+    rank: 8,
+    name: '张三',
+    department: '销售部/华东区',
+    firstLetter: '三',
+    avatarColor: 'bg-indigo-500',
+    jan: 86.0,
+    feb: 87.5,
+    mar: 89.0,
+    quarterAvg: 87.50,
+    deptRank: 0.90,
+    finalScore: 78.75,
+  },
 ];
+
+type SortField = 'name' | 'finalScore' | 'quarterAvg' | 'jan' | 'feb' | 'mar' | 'deptRank' | null;
+type SortOrder = 'asc' | 'desc';
 
 function MonthlyPerformanceWorkbenchContent() {
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedDepartment, setSelectedDepartment] = useState<string>('');
+  const [scoreRange, setScoreRange] = useState<{ min: number; max: number }>({ min: 0, max: 100 });
+  const [sortField, setSortField] = useState<SortField>(null);
+  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
+
   const totalEmployees = 1248;
   const itemsPerPage = 5;
 
+  // 获取所有部门列表
+  const departments = useMemo(() => {
+    const depts = new Set(mockEmployees.map(emp => emp.department));
+    return Array.from(depts).sort();
+  }, []);
+
+  // 筛选和排序数据
+  const filteredAndSortedData = useMemo(() => {
+    let result = [...mockEmployees];
+
+    // 按搜索关键词筛选
+    if (searchQuery) {
+      result = result.filter(emp =>
+        emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        emp.department.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    // 按部门筛选
+    if (selectedDepartment) {
+      result = result.filter(emp => emp.department === selectedDepartment);
+    }
+
+    // 按分数范围筛选
+    result = result.filter(emp => emp.finalScore >= scoreRange.min && emp.finalScore <= scoreRange.max);
+
+    // 排序
+    if (sortField) {
+      result.sort((a, b) => {
+        const aValue = a[sortField as keyof EmployeePerformance];
+        const bValue = b[sortField as keyof EmployeePerformance];
+
+        if (typeof aValue === 'number' && typeof bValue === 'number') {
+          return sortOrder === 'asc' ? aValue - bValue : bValue - aValue;
+        }
+
+        if (typeof aValue === 'string' && typeof bValue === 'string') {
+          return sortOrder === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+        }
+
+        return 0;
+      });
+    }
+
+    return result;
+  }, [searchQuery, selectedDepartment, scoreRange, sortField, sortOrder]);
+
+  // 分页
+  const totalPages = Math.ceil(filteredAndSortedData.length / itemsPerPage);
+  const paginatedData = filteredAndSortedData.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
+
+  const resetFilters = () => {
+    setSearchQuery('');
+    setSelectedDepartment('');
+    setScoreRange({ min: 0, max: 100 });
+    setSortField(null);
+    setSortOrder('asc');
+    setCurrentPage(1);
+  };
+
   return (
-    <div className="bg-surface">
+    <div className="bg-slate-50">
       {/* Page Header */}
       <div className="bg-white border-b border-gray-200 px-8 py-8">
-        <h1 className="text-3xl font-bold text-on-surface mb-2" style={{ fontFamily: 'Manrope, sans-serif' }}>
+        <h1 className="text-3xl font-bold text-slate-900 mb-2">
           季度绩效概览
         </h1>
-        <p className="text-on-surface-variant text-sm">
+        <p className="text-slate-600 text-sm">
           基于 2023 年第 3 季度的绩效指标评估，旨在现阶段各层级的战略对齐程度与执行力产出。
         </p>
       </div>
 
-      <div className="max-w-7xl mx-auto px-8 py-8">
-        <div className="grid grid-cols-3 gap-8 mb-12">
-          {/* Left: Statistics */}
-          <div className="col-span-2 space-y-6">
-            {/* Stats Cards */}
-            <div className="grid grid-cols-3 gap-4">
-              <div className="bg-white rounded-lg p-6 border border-gray-200">
-                <div className="text-sm text-on-surface-variant mb-2">平均得分</div>
-                <div className="text-4xl font-bold text-primary" style={{ fontFamily: 'Manrope, sans-serif' }}>
-                  92.4
-                </div>
-                <div className="text-xs text-on-surface-variant mt-1">/ 100</div>
-              </div>
-              <div className="bg-white rounded-lg p-6 border border-gray-200">
-                <div className="text-sm text-on-surface-variant mb-2">完成率</div>
-                <div className="text-4xl font-bold text-primary" style={{ fontFamily: 'Manrope, sans-serif' }}>
-                  98.2%
-                </div>
-              </div>
-              <div className="bg-white rounded-lg p-6 border border-gray-200">
-                <div className="text-sm text-on-surface-variant mb-2">参评人数</div>
-                <div className="text-4xl font-bold text-primary" style={{ fontFamily: 'Manrope, sans-serif' }}>
-                  1,248
-                </div>
-              </div>
-            </div>
-          </div>
+      {/* Stats Cards */}
+      <div className="px-8 py-6 grid grid-cols-3 gap-6">
+        <div className="bg-white rounded-lg p-6 border border-slate-200">
+          <div className="text-slate-600 text-sm font-medium mb-2">平均得分</div>
+          <div className="text-3xl font-bold text-slate-900">92.4</div>
+          <div className="text-slate-500 text-xs mt-2">/ 100</div>
+        </div>
+        <div className="bg-white rounded-lg p-6 border border-slate-200">
+          <div className="text-slate-600 text-sm font-medium mb-2">完成率</div>
+          <div className="text-3xl font-bold text-slate-900">98.2%</div>
+          <div className="text-slate-500 text-xs mt-2">评估完成</div>
+        </div>
+        <div className="bg-white rounded-lg p-6 border border-slate-200">
+          <div className="text-slate-600 text-sm font-medium mb-2">参评人数</div>
+          <div className="text-3xl font-bold text-slate-900">1,248</div>
+          <div className="text-slate-500 text-xs mt-2">总人数</div>
+        </div>
+      </div>
 
-          {/* Right: Featured Card */}
-          <div className="bg-gradient-to-br from-primary to-primary-dim rounded-xl p-6 text-white">
-            <div className="inline-block bg-white bg-opacity-20 px-3 py-1 rounded-full text-xs font-semibold mb-3">
-              Q3 FINALIST
+      {/* Filter and Search Section */}
+      <div className="px-8 py-6">
+        <div className="bg-white rounded-lg border border-slate-200 p-6">
+          <div className="flex items-center gap-4 mb-4">
+            {/* Search Input */}
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={18} />
+              <input
+                type="text"
+                placeholder="搜索员工名称或部门..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500"
+              />
             </div>
-            <h3 className="text-xl font-bold mb-1" style={{ fontFamily: 'Manrope, sans-serif' }}>
-              季度最佳绩效员工
-            </h3>
-            <p className="text-sm text-white text-opacity-90 mb-4">战略研究中心·张秋实</p>
-            <button className="w-full bg-white text-primary font-semibold py-2 rounded-lg hover:bg-opacity-90 transition-opacity">
-              查看个人报告
+
+            {/* Filter Button */}
+            <button
+              onClick={() => setShowFilterPanel(!showFilterPanel)}
+              className="flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+            >
+              <Filter size={18} className="text-slate-600" />
+              <span className="text-slate-600 font-medium">筛选</span>
+            </button>
+
+            {/* Download Button */}
+            <button className="flex items-center gap-2 px-4 py-2 bg-blue-900 text-white rounded-lg hover:bg-blue-800 transition-colors">
+              <Download size={18} />
+              <span>导出</span>
             </button>
           </div>
-        </div>
 
-        {/* Employee Performance Table */}
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          {/* Table Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-on-surface" style={{ fontFamily: 'Manrope, sans-serif' }}>
-              2023年第3季度个人绩效名单表
-            </h2>
-            <div className="flex gap-3">
-              <button className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-on-surface border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                <Filter size={16} />
-                筛选
-              </button>
-              <button className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:opacity-90 transition-opacity">
-                <Download size={16} />
-                导出数据
+          {/* Filter Panel */}
+          {showFilterPanel && (
+            <div className="border-t border-slate-200 pt-4 mt-4">
+              <div className="grid grid-cols-3 gap-4 mb-4">
+                {/* Department Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">部门</label>
+                  <select
+                    value={selectedDepartment}
+                    onChange={(e) => {
+                      setSelectedDepartment(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500"
+                  >
+                    <option value="">全部部门</option>
+                    {departments.map(dept => (
+                      <option key={dept} value={dept}>{dept}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Score Range Min */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">最低分数</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={scoreRange.min}
+                    onChange={(e) => {
+                      setScoreRange({ ...scoreRange, min: Number(e.target.value) });
+                      setCurrentPage(1);
+                    }}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                {/* Score Range Max */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">最高分数</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={scoreRange.max}
+                    onChange={(e) => {
+                      setScoreRange({ ...scoreRange, max: Number(e.target.value) });
+                      setCurrentPage(1);
+                    }}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <button
+                onClick={resetFilters}
+                className="px-4 py-2 text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                重置筛选
               </button>
             </div>
-          </div>
+          )}
+        </div>
+      </div>
 
-          {/* Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-surface-container border-b border-gray-200">
-                  <th className="px-6 py-3 text-left font-semibold text-on-surface">排名</th>
-                  <th className="px-6 py-3 text-left font-semibold text-on-surface">员工信息</th>
-                  <th className="px-6 py-3 text-left font-semibold text-on-surface">所属部门</th>
-                  <th className="px-6 py-3 text-right font-semibold text-on-surface">1月总分</th>
-                  <th className="px-6 py-3 text-right font-semibold text-on-surface">2月总分</th>
-                  <th className="px-6 py-3 text-right font-semibold text-on-surface">3月总分</th>
-                  <th className="px-6 py-3 text-right font-semibold text-on-surface">季度平均分</th>
-                  <th className="px-6 py-3 text-right font-semibold text-on-surface">部门内位次</th>
-                  <th className="px-6 py-3 text-right font-semibold text-on-surface">最终得分</th>
-                  <th className="px-6 py-3 text-center font-semibold text-on-surface">操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                {mockEmployees.map((emp, idx) => (
-                  <tr key={idx} className="border-b border-gray-200 hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 text-on-surface font-medium">{emp.rank}</td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-full ${emp.avatarColor} flex items-center justify-center text-white text-xs font-bold`}>
-                          {emp.firstLetter}
-                        </div>
-                        <span className="text-on-surface font-medium">{emp.name}</span>
+      {/* Results Info */}
+      <div className="px-8 py-4">
+        <p className="text-slate-600 text-sm">
+          显示 {paginatedData.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0} 到 {Math.min(currentPage * itemsPerPage, filteredAndSortedData.length)} 条，共 {filteredAndSortedData.length} 条记录
+        </p>
+      </div>
+
+      {/* Table */}
+      <div className="px-8 pb-8">
+        <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-slate-900">排名</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-slate-900">员工信息</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-slate-900">所属部门</th>
+                <th className="px-6 py-4 text-right">
+                  <button
+                    onClick={() => handleSort('jan')}
+                    className="flex items-center gap-1 ml-auto hover:text-blue-600 transition-colors"
+                  >
+                    <span className="text-sm font-semibold text-slate-900">1月分</span>
+                    {sortField === 'jan' && <ArrowUpDown size={14} />}
+                  </button>
+                </th>
+                <th className="px-6 py-4 text-right">
+                  <button
+                    onClick={() => handleSort('feb')}
+                    className="flex items-center gap-1 ml-auto hover:text-blue-600 transition-colors"
+                  >
+                    <span className="text-sm font-semibold text-slate-900">2月分</span>
+                    {sortField === 'feb' && <ArrowUpDown size={14} />}
+                  </button>
+                </th>
+                <th className="px-6 py-4 text-right">
+                  <button
+                    onClick={() => handleSort('mar')}
+                    className="flex items-center gap-1 ml-auto hover:text-blue-600 transition-colors"
+                  >
+                    <span className="text-sm font-semibold text-slate-900">3月分</span>
+                    {sortField === 'mar' && <ArrowUpDown size={14} />}
+                  </button>
+                </th>
+                <th className="px-6 py-4 text-right">
+                  <button
+                    onClick={() => handleSort('quarterAvg')}
+                    className="flex items-center gap-1 ml-auto hover:text-blue-600 transition-colors"
+                  >
+                    <span className="text-sm font-semibold text-slate-900">季度平均</span>
+                    {sortField === 'quarterAvg' && <ArrowUpDown size={14} />}
+                  </button>
+                </th>
+                <th className="px-6 py-4 text-right">
+                  <button
+                    onClick={() => handleSort('deptRank')}
+                    className="flex items-center gap-1 ml-auto hover:text-blue-600 transition-colors"
+                  >
+                    <span className="text-sm font-semibold text-slate-900">加权系数</span>
+                    {sortField === 'deptRank' && <ArrowUpDown size={14} />}
+                  </button>
+                </th>
+                <th className="px-6 py-4 text-right">
+                  <button
+                    onClick={() => handleSort('finalScore')}
+                    className="flex items-center gap-1 ml-auto hover:text-blue-600 transition-colors"
+                  >
+                    <span className="text-sm font-semibold text-slate-900">最终得分</span>
+                    {sortField === 'finalScore' && <ArrowUpDown size={14} />}
+                  </button>
+                </th>
+                <th className="px-6 py-4 text-center text-sm font-semibold text-slate-900">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedData.map((employee, index) => (
+                <tr key={index} className="border-b border-slate-200 hover:bg-slate-50 transition-colors">
+                  <td className="px-6 py-4 text-sm font-semibold text-slate-900">{employee.rank}</td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-full ${employee.avatarColor} flex items-center justify-center text-white font-semibold`}>
+                        {employee.firstLetter}
                       </div>
-                    </td>
-                    <td className="px-6 py-4 text-on-surface-variant">{emp.department}</td>
-                    <td className="px-6 py-4 text-right text-on-surface font-medium">{emp.jan.toFixed(1)}</td>
-                    <td className="px-6 py-4 text-right text-on-surface font-medium">{emp.feb.toFixed(1)}</td>
-                    <td className="px-6 py-4 text-right text-on-surface font-medium">{emp.mar.toFixed(1)}</td>
-                    <td className="px-6 py-4 text-right text-on-surface font-medium">{emp.quarterAvg.toFixed(2)}</td>
-                    <td className="px-6 py-4 text-right text-on-surface font-medium">{emp.deptRank.toFixed(2)}</td>
-                    <td className="px-6 py-4 text-right text-primary font-bold">{emp.finalScore.toFixed(2)}</td>
-                    <td className="px-6 py-4 text-center">
-                      <button className="text-primary hover:text-primary-dim transition-colors font-medium">
-                        详情
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                      <span className="text-sm font-medium text-slate-900">{employee.name}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-slate-600">{employee.department}</td>
+                  <td className="px-6 py-4 text-right text-sm text-slate-900">{employee.jan.toFixed(1)}</td>
+                  <td className="px-6 py-4 text-right text-sm text-slate-900">{employee.feb.toFixed(1)}</td>
+                  <td className="px-6 py-4 text-right text-sm text-slate-900">{employee.mar.toFixed(1)}</td>
+                  <td className="px-6 py-4 text-right text-sm text-slate-900">{employee.quarterAvg.toFixed(2)}</td>
+                  <td className="px-6 py-4 text-right text-sm text-slate-900">{employee.deptRank.toFixed(2)}</td>
+                  <td className="px-6 py-4 text-right text-sm font-semibold text-slate-900">{employee.finalScore.toFixed(2)}</td>
+                  <td className="px-6 py-4 text-center">
+                    <button className="text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors">
+                      详情
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
 
-          {/* Pagination */}
-          <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
-            <div className="text-sm text-on-surface-variant">
-              共 {totalEmployees} 名员工 1 页绩效数据
+          {paginatedData.length === 0 && (
+            <div className="px-6 py-12 text-center">
+              <p className="text-slate-600 text-sm">没有找到匹配的记录</p>
             </div>
-            <div className="flex items-center gap-2">
-              <button className="px-3 py-1 text-sm text-on-surface-variant hover:bg-gray-100 rounded transition-colors">
-                <ChevronLeft size={16} />
-              </button>
-              <button className="px-3 py-1 text-sm font-medium bg-primary text-white rounded">1</button>
-              <button className="px-3 py-1 text-sm text-on-surface hover:bg-gray-100 rounded transition-colors">2</button>
-              <button className="px-3 py-1 text-sm text-on-surface hover:bg-gray-100 rounded transition-colors">3</button>
-              <button className="px-3 py-1 text-sm text-on-surface-variant hover:bg-gray-100 rounded transition-colors">
-                <ChevronRight size={16} />
-              </button>
-            </div>
-          </div>
+          )}
         </div>
 
-        {/* Quarterly Trend Chart */}
-        <div className="mt-12 bg-white rounded-lg border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-on-surface" style={{ fontFamily: 'Manrope, sans-serif' }}>
-              📈 季度环比提升趋势
-            </h3>
-            <a href="#" className="text-primary hover:text-primary-dim transition-colors text-sm font-medium">
-              查看完整诊断报告 &gt;
-            </a>
+        {/* Pagination */}
+        <div className="flex items-center justify-between mt-6">
+          <div className="text-sm text-slate-600">
+            第 {currentPage} 页，共 {totalPages} 页
           </div>
-          <div className="h-64 bg-gray-50 rounded-lg flex items-center justify-center text-on-surface-variant">
-            [季度对比图表 - Q1, Q2, Q3, Q4(预)]
-          </div>
-        </div>
-
-        {/* Management Suggestions */}
-        <div className="mt-12 bg-white rounded-lg border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-on-surface mb-4" style={{ fontFamily: 'Manrope, sans-serif' }}>
-            💡 管理员策与建议
-          </h3>
-          <div className="space-y-3">
-            <div className="flex gap-3">
-              <div className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0"></div>
-              <p className="text-sm text-on-surface">
-                研究中心全体在在专利的学位分与技术点，建议作为融合人才入库。
-              </p>
-            </div>
-            <div className="flex gap-3">
-              <div className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0"></div>
-              <p className="text-sm text-on-surface">
-                生生销售主任在3月业绩对比基础较好，涨升了，2月的均衡下记。
-              </p>
-            </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+              disabled={currentPage === 1}
+              className="p-2 border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronLeft size={18} className="text-slate-600" />
+            </button>
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              const pageNum = i + 1;
+              return (
+                <button
+                  key={pageNum}
+                  onClick={() => setCurrentPage(pageNum)}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    currentPage === pageNum
+                      ? 'bg-blue-900 text-white'
+                      : 'border border-slate-300 text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  {pageNum}
+                </button>
+              );
+            })}
+            <button
+              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+              disabled={currentPage === totalPages}
+              className="p-2 border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronRight size={18} className="text-slate-600" />
+            </button>
           </div>
         </div>
       </div>
@@ -271,7 +496,7 @@ function MonthlyPerformanceWorkbenchContent() {
 
 export default function MonthlyPerformanceWorkbench() {
   return (
-    <PerformanceLayout activeNav="monthly-workbench">
+    <PerformanceLayout>
       <MonthlyPerformanceWorkbenchContent />
     </PerformanceLayout>
   );
