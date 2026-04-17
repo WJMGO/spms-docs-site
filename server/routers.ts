@@ -3,6 +3,7 @@ import { assessmentRouter } from './routers/assessment';
 import { reportsRouter } from './routers/reports';
 import { dashboardRouter } from './routers/dashboard';
 import { performanceRouter } from './routers/performance';
+import { performanceDimensionsRouter } from './routers/performance-dimensions';
 import { analyticsRouter } from './routers/analytics';
 import { managementRouter } from './routers/management';
 import { auditRouter } from './routers/audit';
@@ -335,6 +336,7 @@ export const appRouter = router({
   reports: reportsRouter,
   dashboard: dashboardRouter,
   performance: performanceRouter,
+  performanceDimensions: performanceDimensionsRouter,
   analytics: analyticsRouter,
   management: managementRouter,
   audit: auditRouter,

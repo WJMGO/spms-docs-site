@@ -1,13 +1,15 @@
-import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Search, Bell, Settings, Menu, X, TrendingUp, Download, ChevronRight, Users } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
+import { useState } from "react";
 
 export default function Dashboard() {
+  const [, navigate] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedQuarter, setSelectedQuarter] = useState("Q3");
+  const [activeNav, setActiveNav] = useState("overview");
 
   // 模拟排名数据
   const rankingData = [
@@ -75,12 +77,18 @@ export default function Dashboard() {
   ];
 
   const topNavItems = [
-    { label: "绩效汇总", active: true },
-    { label: "当月绩效" },
-    { label: "历史月度绩效" },
-    { label: "历史季度绩效" },
-    { label: "全年绩效" },
+    { label: "绩效汇总", path: "/", id: "overview" },
+    { label: "当月绩效", path: "/monthly-performance", id: "monthly" },
+    { label: "历史月度绩效", path: "/historical-monthly", id: "historical-monthly" },
+    { label: "历史季度绩效", path: "/historical-quarterly", id: "historical-quarterly" },
+    { label: "全年绩效", path: "/annual-performance", id: "annual" },
+    { label: "绩效频则", path: "/performance-rules", id: "rules" },
   ];
+
+  const handleNavClick = (path: string, id: string) => {
+    setActiveNav(id);
+    navigate(path);
+  };
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -98,9 +106,10 @@ export default function Dashboard() {
             <nav className="hidden md:flex gap-8">
               {topNavItems.map((item) => (
                 <button
-                  key={item.label}
+                  key={item.id}
+                  onClick={() => handleNavClick(item.path, item.id)}
                   className={`text-sm font-medium pb-2 border-b-2 transition-colors ${
-                    item.active
+                    activeNav === item.id
                       ? "text-blue-900 border-blue-900"
                       : "text-slate-600 border-transparent hover:text-slate-900"
                   }`}

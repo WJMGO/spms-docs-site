@@ -14,6 +14,11 @@ import AuditLogsPage from "./pages/AuditLogsPage";
 import PermissionsPage from "./pages/PermissionsPage";
 import EmployeeManagement from "./pages/EmployeeManagement";
 import PerformanceRegistration from "./pages/PerformanceRegistration";
+import MonthlyPerformance from "./pages/MonthlyPerformance";
+import HistoricalMonthlyPerformance from "./pages/HistoricalMonthlyPerformance";
+import HistoricalQuarterlyPerformance from "./pages/HistoricalQuarterlyPerformance";
+import AnnualPerformance from "./pages/AnnualPerformance";
+import PerformanceRules from "./pages/PerformanceRules";
 
 
 function Router() {
@@ -25,6 +30,11 @@ function Router() {
       <Route path={"/reports"} component={ReportsPage} />
       <Route path={"/employees"} component={EmployeeManagement} />
       <Route path={"/performance-registration"} component={PerformanceRegistration} />
+      <Route path={"/monthly-performance"} component={MonthlyPerformance} />
+      <Route path={"/historical-monthly"} component={HistoricalMonthlyPerformance} />
+      <Route path={"/historical-quarterly"} component={HistoricalQuarterlyPerformance} />
+      <Route path={"/annual-performance"} component={AnnualPerformance} />
+      <Route path={"/performance-rules"} component={PerformanceRules} />
       <Route path={"/audit-logs"} component={AuditLogsPage} />
       <Route path={"/permissions"} component={PermissionsPage} />
       <Route path={"/test"} component={TestPage} />
