@@ -3,8 +3,9 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Download, Filter } from 'lucide-react';
+import PerformanceLayout from '@/components/PerformanceLayout';
 
-export default function MonthlyPerformance() {
+function MonthlyPerformanceContent() {
   const [selectedDepartment, setSelectedDepartment] = useState('all');
 
   // Mock 当月绩效数据
@@ -38,7 +39,7 @@ export default function MonthlyPerformance() {
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
+    <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-8">
       {/* 页面标题 */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-slate-900 mb-2">当月绩效评定</h1>
@@ -144,5 +145,13 @@ export default function MonthlyPerformance() {
         </div>
       </Card>
     </div>
+  );
+}
+
+export default function MonthlyPerformance() {
+  return (
+    <PerformanceLayout activeNav="monthly">
+      <MonthlyPerformanceContent />
+    </PerformanceLayout>
   );
 }

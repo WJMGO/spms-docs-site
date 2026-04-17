@@ -82,7 +82,6 @@ export default function Dashboard() {
     { label: "历史月度绩效", path: "/historical-monthly", id: "historical-monthly" },
     { label: "历史季度绩效", path: "/historical-quarterly", id: "historical-quarterly" },
     { label: "全年绩效", path: "/annual-performance", id: "annual" },
-    { label: "绩效频则", path: "/performance-rules", id: "rules" },
   ];
 
   const handleNavClick = (path: string, id: string) => {

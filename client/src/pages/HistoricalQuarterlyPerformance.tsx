@@ -3,8 +3,9 @@ import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, L
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
+import PerformanceLayout from '@/components/PerformanceLayout';
 
-export default function HistoricalQuarterlyPerformance() {
+function HistoricalQuarterlyPerformanceContent() {
   // Mock 历史季度数据
   const quarterlyData = [
     { quarter: 'Q1 2023', avgScore: 88.5, completion: 91.2, participants: 1050, ranking: 3 },
@@ -36,7 +37,7 @@ export default function HistoricalQuarterlyPerformance() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
+    <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-8">
       {/* 页面标题 */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-slate-900 mb-2">历史季度绩效</h1>
@@ -164,5 +165,13 @@ export default function HistoricalQuarterlyPerformance() {
         </div>
       </Card>
     </div>
+  );
+}
+
+export default function HistoricalQuarterlyPerformance() {
+  return (
+    <PerformanceLayout activeNav="historical-quarterly">
+      <HistoricalQuarterlyPerformanceContent />
+    </PerformanceLayout>
   );
 }

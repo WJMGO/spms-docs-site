@@ -3,8 +3,9 @@ import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, L
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Download, Award } from 'lucide-react';
+import PerformanceLayout from '@/components/PerformanceLayout';
 
-export default function AnnualPerformance() {
+function AnnualPerformanceContent() {
   // Mock 全年绩效数据
   const annualSummary = {
     year: '2024年',
@@ -48,7 +49,7 @@ export default function AnnualPerformance() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
+    <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-8">
       {/* 页面标题 */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-slate-900 mb-2">全年绩效总结</h1>
@@ -202,5 +203,13 @@ export default function AnnualPerformance() {
         </div>
       </Card>
     </div>
+  );
+}
+
+export default function AnnualPerformance() {
+  return (
+    <PerformanceLayout activeNav="annual">
+      <AnnualPerformanceContent />
+    </PerformanceLayout>
   );
 }

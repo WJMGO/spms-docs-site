@@ -3,8 +3,9 @@ import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, L
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Download, TrendingUp } from 'lucide-react';
+import PerformanceLayout from '@/components/PerformanceLayout';
 
-export default function HistoricalMonthlyPerformance() {
+function HistoricalMonthlyPerformanceContent() {
   const [selectedMetric, setSelectedMetric] = useState('average');
 
   // Mock 历史月度数据
@@ -30,7 +31,7 @@ export default function HistoricalMonthlyPerformance() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
+    <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-8">
       {/* 页面标题 */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-slate-900 mb-2">历史月度绩效</h1>
@@ -147,5 +148,13 @@ export default function HistoricalMonthlyPerformance() {
         </div>
       </Card>
     </div>
+  );
+}
+
+export default function HistoricalMonthlyPerformance() {
+  return (
+    <PerformanceLayout activeNav="historical-monthly">
+      <HistoricalMonthlyPerformanceContent />
+    </PerformanceLayout>
   );
 }
