@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useLocation } from 'wouter';
 import { ChevronLeft, ChevronRight, Download, Filter, ChevronDown, Search, ArrowUpDown } from 'lucide-react';
 import PerformanceLayout from '@/components/PerformanceLayout';
 
@@ -127,6 +128,7 @@ type SortField = 'name' | 'finalScore' | 'quarterAvg' | 'jan' | 'feb' | 'mar' | 
 type SortOrder = 'asc' | 'desc';
 
 function MonthlyPerformanceWorkbenchContent() {
+  const [, setLocation] = useLocation();
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState<string>('');
@@ -435,7 +437,10 @@ function MonthlyPerformanceWorkbenchContent() {
                   <td className="px-6 py-4 text-right text-sm text-slate-900">{employee.deptRank.toFixed(2)}</td>
                   <td className="px-6 py-4 text-right text-sm font-semibold text-slate-900">{employee.finalScore.toFixed(2)}</td>
                   <td className="px-6 py-4 text-center">
-                    <button className="text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors">
+                    <button
+                      onClick={() => setLocation(`/employee/${employee.rank}`)}
+                      className="text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors"
+                    >
                       详情
                     </button>
                   </td>
