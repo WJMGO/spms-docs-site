@@ -71,9 +71,9 @@ export default function Dashboard() {
   ];
 
   const navigationItems = [
-    { id: "overview", label: "绩效汇总", icon: "📊" },
-    { id: "monthly", label: "月度绩效评定工作台", icon: "📋" },
-    { id: "rules", label: "绩效频则", icon: "⚙️" },
+    { id: "overview", label: "绩效汇总", icon: "📊", path: "/" },
+    { id: "monthly", label: "月度绩效评定工作台", icon: "📋", path: "/monthly-workbench" },
+    { id: "rules", label: "绩效频则", icon: "⚙️", path: "/performance-rules" },
   ];
 
   const topNavItems = [
@@ -148,7 +148,12 @@ export default function Dashboard() {
               {navigationItems.map((item) => (
                 <button
                   key={item.id}
-                  className="w-full text-left px-4 py-3 rounded-md text-slate-700 hover:bg-slate-200 transition-colors flex items-center gap-3"
+                  onClick={() => handleNavClick(item.path, item.id)}
+                  className={`w-full text-left px-4 py-3 rounded-md transition-colors flex items-center gap-3 ${
+                    activeNav === item.id
+                      ? "bg-blue-200 text-blue-900 font-semibold"
+                      : "text-slate-700 hover:bg-slate-200"
+                  }`}
                 >
                   <span>{item.icon}</span>
                   <span className="text-sm font-medium">{item.label}</span>
