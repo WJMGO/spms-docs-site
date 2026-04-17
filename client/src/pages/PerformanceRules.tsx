@@ -113,32 +113,32 @@ export default function PerformanceRules() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-slate-50">
       {/* Page Header */}
-      <div className="bg-surface-container-low border-b border-surface-variant px-6 py-6">
-        <h1 className="text-3xl font-headline font-bold text-on-surface mb-2">绩效规则管理</h1>
-        <p className="text-on-surface-variant">管理绩效评分维度、加减分规则和等级划分</p>
+      <div className="bg-white border-b border-gray-200 px-6 py-6">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">绩效规则管理</h1>
+        <p className="text-gray-600">管理绩效评分维度、加减分规则和等级划分</p>
       </div>
 
-      <div className="container mx-auto px-4 py-8">
+      <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Performance Dimensions Section */}
         <section className="mb-12">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-headline font-bold text-on-surface">评分维度规则</h2>
-            <button className="btn-primary">
+            <h2 className="text-2xl font-bold text-gray-900">评分维度规则</h2>
+            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors">
               <span className="text-sm">+ 新增维度</span>
             </button>
           </div>
 
           <div className="space-y-4">
             {rules.map((rule) => (
-              <div key={rule.id} className="card">
+              <div key={rule.id} className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
                 <div
                   className="flex items-center justify-between cursor-pointer"
                   onClick={() => toggleExpanded(rule.id)}
                 >
                   <div className="flex items-center gap-4 flex-1">
-                    <button className="text-primary hover:text-primary-dim transition-colors">
+                    <button className="text-blue-600 hover:text-blue-700 transition-colors">
                       {expandedRules.has(rule.id) ? (
                         <ChevronUp size={20} />
                       ) : (
@@ -146,20 +146,20 @@ export default function PerformanceRules() {
                       )}
                     </button>
                     <div className="flex-1">
-                      <h3 className="text-lg font-headline font-semibold text-on-surface">
+                      <h3 className="text-lg font-semibold text-gray-900">
                         {rule.name}
                       </h3>
-                      <p className="text-sm text-on-surface-variant mt-1">{rule.description}</p>
+                      <p className="text-sm text-gray-600 mt-1">{rule.description}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="text-right">
-                      <div className="text-sm text-on-surface-variant">权重</div>
-                      <div className="text-xl font-headline font-bold text-primary">
+                      <div className="text-sm text-gray-600">权重</div>
+                      <div className="text-xl font-bold text-blue-600">
                         {rule.weight}%
                       </div>
                     </div>
-                    <button className="text-primary hover:text-primary-dim transition-colors p-2">
+                    <button className="text-blue-600 hover:text-blue-700 transition-colors p-2">
                       <Edit2 size={18} />
                     </button>
                   </div>
@@ -167,33 +167,33 @@ export default function PerformanceRules() {
 
                 {/* Expanded Content */}
                 {expandedRules.has(rule.id) && (
-                  <div className="mt-6 pt-6 border-t border-surface-variant">
-                    <h4 className="text-sm font-label font-semibold text-on-surface mb-4">
+                  <div className="mt-6 pt-6 border-t border-gray-200">
+                    <h4 className="text-sm font-semibold text-gray-900 mb-4">
                       评分等级标准
                     </h4>
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead>
-                          <tr className="border-b border-surface-variant">
-                            <th className="table-header px-4 py-3 text-left">等级</th>
-                            <th className="table-header px-4 py-3 text-right">最低分</th>
-                            <th className="table-header px-4 py-3 text-right">最高分</th>
-                            <th className="table-header px-4 py-3 text-left">说明</th>
+                          <tr className="border-b border-gray-200">
+                            <th className="bg-gray-50 px-4 py-3 text-left font-semibold text-gray-900">等级</th>
+                            <th className="bg-gray-50 px-4 py-3 text-right font-semibold text-gray-900">最低分</th>
+                            <th className="bg-gray-50 px-4 py-3 text-right font-semibold text-gray-900">最高分</th>
+                            <th className="bg-gray-50 px-4 py-3 text-left font-semibold text-gray-900">说明</th>
                           </tr>
                         </thead>
                         <tbody>
                           {rule.criteria.map((criterion, idx) => (
-                            <tr key={idx} className="border-b border-surface-variant hover:bg-surface-container">
-                              <td className="table-cell px-4 py-3 font-semibold text-primary">
+                            <tr key={idx} className="border-b border-gray-200 hover:bg-gray-50">
+                              <td className="px-4 py-3 font-semibold text-blue-600">
                                 {criterion.grade}
                               </td>
-                              <td className="table-cell-numeric px-4 py-3">
+                              <td className="px-4 py-3 text-right text-gray-900">
                                 {criterion.minScore}
                               </td>
-                              <td className="table-cell-numeric px-4 py-3">
+                              <td className="px-4 py-3 text-right text-gray-900">
                                 {criterion.maxScore}
                               </td>
-                              <td className="table-cell px-4 py-3 text-on-surface-variant">
+                              <td className="px-4 py-3 text-gray-600">
                                 {criterion.description}
                               </td>
                             </tr>
@@ -211,25 +211,27 @@ export default function PerformanceRules() {
         {/* Bonus Rules Section */}
         <section className="mb-12">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-headline font-bold text-on-surface">绩效加分规则</h2>
-            <button className="btn-primary">
+            <h2 className="text-2xl font-bold text-gray-900">绩效加分规则</h2>
+            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors">
               <span className="text-sm">+ 新增规则</span>
             </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {bonusRules.map((bonus) => (
-              <div key={bonus.id} className="card">
+              <div key={bonus.id} className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <h3 className="text-lg font-headline font-semibold text-on-surface">
+                    <h3 className="text-lg font-semibold text-gray-900">
                       {bonus.name}
                     </h3>
-                    <p className="text-sm text-on-surface-variant mt-2">{bonus.description}</p>
+                    <p className="text-sm text-gray-600 mt-2">{bonus.description}</p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="chip-success">+{bonus.points}</div>
-                    <button className="text-primary hover:text-primary-dim transition-colors">
+                    <div className="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-semibold">
+                      +{bonus.points}
+                    </div>
+                    <button className="text-blue-600 hover:text-blue-700 transition-colors">
                       <Edit2 size={18} />
                     </button>
                   </div>
@@ -242,25 +244,27 @@ export default function PerformanceRules() {
         {/* Penalty Rules Section */}
         <section className="mb-12">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-headline font-bold text-on-surface">绩效减分规则</h2>
-            <button className="btn-primary">
+            <h2 className="text-2xl font-bold text-gray-900">绩效减分规则</h2>
+            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors">
               <span className="text-sm">+ 新增规则</span>
             </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {penaltyRules.map((penalty) => (
-              <div key={penalty.id} className="card">
+              <div key={penalty.id} className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <h3 className="text-lg font-headline font-semibold text-on-surface">
+                    <h3 className="text-lg font-semibold text-gray-900">
                       {penalty.name}
                     </h3>
-                    <p className="text-sm text-on-surface-variant mt-2">{penalty.description}</p>
+                    <p className="text-sm text-gray-600 mt-2">{penalty.description}</p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="chip-warning">{penalty.points}</div>
-                    <button className="text-primary hover:text-primary-dim transition-colors">
+                    <div className="bg-red-600 text-white px-3 py-1 rounded-full text-sm font-semibold">
+                      {penalty.points}
+                    </div>
+                    <button className="text-blue-600 hover:text-blue-700 transition-colors">
                       <Edit2 size={18} />
                     </button>
                   </div>
@@ -273,36 +277,36 @@ export default function PerformanceRules() {
         {/* Grade Rules Section */}
         <section className="mb-12">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-headline font-bold text-on-surface">等级划分规则</h2>
-            <button className="btn-primary">
+            <h2 className="text-2xl font-bold text-gray-900">等级划分规则</h2>
+            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors">
               <span className="text-sm">编辑</span>
             </button>
           </div>
 
-          <div className="card">
+          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-surface-variant">
-                    <th className="table-header px-4 py-3 text-left">等级</th>
-                    <th className="table-header px-4 py-3 text-right">最低分</th>
-                    <th className="table-header px-4 py-3 text-right">最高分</th>
-                    <th className="table-header px-4 py-3 text-left">级别</th>
+                  <tr className="border-b border-gray-200">
+                    <th className="bg-gray-50 px-4 py-3 text-left font-semibold text-gray-900">等级</th>
+                    <th className="bg-gray-50 px-4 py-3 text-right font-semibold text-gray-900">最低分</th>
+                    <th className="bg-gray-50 px-4 py-3 text-right font-semibold text-gray-900">最高分</th>
+                    <th className="bg-gray-50 px-4 py-3 text-left font-semibold text-gray-900">级别</th>
                   </tr>
                 </thead>
                 <tbody>
                   {gradeRules.map((grade, idx) => (
-                    <tr key={idx} className="border-b border-surface-variant hover:bg-surface-container">
-                      <td className="table-cell px-4 py-3 font-semibold text-primary text-lg">
+                    <tr key={idx} className="border-b border-gray-200 hover:bg-gray-50">
+                      <td className="px-4 py-3 font-semibold text-blue-600 text-lg">
                         {grade.grade}
                       </td>
-                      <td className="table-cell-numeric px-4 py-3">
+                      <td className="px-4 py-3 text-right text-gray-900">
                         {grade.minScore}
                       </td>
-                      <td className="table-cell-numeric px-4 py-3">
+                      <td className="px-4 py-3 text-right text-gray-900">
                         {grade.maxScore}
                       </td>
-                      <td className="table-cell px-4 py-3 text-on-surface-variant">
+                      <td className="px-4 py-3 text-gray-600">
                         {grade.level}
                       </td>
                     </tr>
@@ -314,11 +318,11 @@ export default function PerformanceRules() {
         </section>
 
         {/* Info Section */}
-        <section className="bg-surface-container-low rounded-lg p-6 border border-surface-variant">
-          <h3 className="text-lg font-headline font-semibold text-on-surface mb-4">
+        <section className="bg-blue-50 rounded-lg p-6 border border-blue-200">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
             💡 规则说明
           </h3>
-          <ul className="space-y-2 text-on-surface-variant text-sm">
+          <ul className="space-y-2 text-gray-600 text-sm">
             <li>• 评分维度权重总和应为 100%</li>
             <li>• 加分和减分规则可以叠加应用</li>
             <li>• 最终绩效分数 = 各维度分数加权和 + 加分 - 减分</li>
