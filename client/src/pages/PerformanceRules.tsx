@@ -2,10 +2,65 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronDown, ChevronUp, Edit, Download, Plus } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { ChevronDown, ChevronUp, Edit, Download, Plus, Save, X } from "lucide-react";
+import { trpc } from "@/trpc";
+// import { useAuth } from "@/_core/hooks/useAuth";
 
 export default function PerformanceRules() {
+  // const { user } = useAuth();
+  const user = null; // 临时使用 null，后续可以集成真实的 useAuth
   const [expandedRules, setExpandedRules] = useState<string[]>([]);
+  const [editMode, setEditMode] = useState(false);
+  const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
+
+  // 获取规则数据
+  const { data: rulesData, isLoading: rulesLoading } = trpc.performanceRules.getRules.useQuery();
+  const { data: bonusRulesData, isLoading: bonusLoading } = trpc.performanceRules.getBonusRules.useQuery();
+  const { data: penaltyRulesData, isLoading: penaltyLoading } = trpc.performanceRules.getPenaltyRules.useQuery();
+  const { data: gradeRulesData, isLoading: gradeLoading } = trpc.performanceRules.getGradeRules.useQuery();
+
+  // 编辑规则的 mutation
+  const updateRuleMutation = trpc.performanceRules.updateRule.useMutation({
+    onSuccess: () => {
+      console.log("规则已更新");
+      setEditingRuleId(null);
+    },
+    onError: (error: any) => {
+      console.error("更新失败:", error);
+    },
+  });
+
+  const updateBonusRuleMutation = trpc.performanceRules.updateBonusRule.useMutation({
+    onSuccess: () => {
+      console.log("加分规则已更新");
+    },
+    onError: (error: any) => {
+      console.error("更新失败:", error);
+    },
+  });
+
+  const updatePenaltyRuleMutation = trpc.performanceRules.updatePenaltyRule.useMutation({
+    onSuccess: () => {
+      console.log("减分规则已更新");
+    },
+    onError: (error: any) => {
+      console.error("更新失败:", error);
+    },
+  });
+
+  const updateGradeRuleMutation = trpc.performanceRules.updateGradeRule.useMutation({
+    onSuccess: () => {
+      console.log("等级规则已更新");
+    },
+    onError: (error: any) => {
+      console.error("更新失败:", error);
+    },
+  });
+
+  // 检查是否有编辑权限
+  const canEdit = false; // 临时禁用编辑，后续集成权限检查
 
   const toggleRule = (ruleId: string) => {
     setExpandedRules((prev) =>
@@ -13,8 +68,8 @@ export default function PerformanceRules() {
     );
   };
 
-  // 绩效评分规则
-  const performanceRules = [
+  // 使用 Mock 数据作为备份
+  const performanceRules = rulesData || [
     {
       id: "daily-work",
       title: "日常工作表现（40%）",
@@ -31,126 +86,11 @@ export default function PerformanceRules() {
           description: "工作完成度较好，工作态度良好",
           examples: ["按时完成工作任务", "工作质量较好", "配合度高"],
         },
-        {
-          level: "一般（70-79分）",
-          description: "工作完成度一般，基本完成工作任务",
-          examples: ["基本完成工作任务", "工作质量一般", "偶有迟到"],
-        },
-        {
-          level: "及格（60-69分）",
-          description: "工作完成度不理想，需要改进",
-          examples: ["工作任务完成不及时", "工作质量不稳定", "需要督促"],
-        },
-        {
-          level: "不及格（<60分）",
-          description: "工作完成度差，存在严重问题",
-          examples: ["工作任务未完成", "工作质量差", "经常迟到缺勤"],
-        },
-      ],
-    },
-    {
-      id: "work-quality",
-      title: "工作质量（30%）",
-      weight: 30,
-      description: "评估员工工作成果的质量和专业水平",
-      criteria: [
-        {
-          level: "优秀（90-100分）",
-          description: "工作成果质量优秀，专业水平高",
-          examples: ["工作成果获得认可", "专业能力强", "创新意识强"],
-        },
-        {
-          level: "良好（80-89分）",
-          description: "工作成果质量良好，专业水平较高",
-          examples: ["工作成果质量好", "专业能力较强", "有一定创新"],
-        },
-        {
-          level: "一般（70-79分）",
-          description: "工作成果质量一般，专业水平中等",
-          examples: ["工作成果质量一般", "专业能力一般", "按要求完成"],
-        },
-        {
-          level: "及格（60-69分）",
-          description: "工作成果质量一般，需要改进",
-          examples: ["工作成果有缺陷", "专业能力不足", "需要指导"],
-        },
-        {
-          level: "不及格（<60分）",
-          description: "工作成果质量差，专业能力不足",
-          examples: ["工作成果质量差", "专业能力不足", "需要重做"],
-        },
-      ],
-    },
-    {
-      id: "personal-goal",
-      title: "个人目标完成度（20%）",
-      weight: 20,
-      description: "评估员工个人设定目标的完成情况",
-      criteria: [
-        {
-          level: "优秀（90-100分）",
-          description: "目标完成度超过100%",
-          examples: ["完成目标110%以上", "超额完成目标", "创造额外价值"],
-        },
-        {
-          level: "良好（80-89分）",
-          description: "目标完成度90-100%",
-          examples: ["完成目标90-100%", "目标完成良好", "有超额部分"],
-        },
-        {
-          level: "一般（70-79分）",
-          description: "目标完成度80-89%",
-          examples: ["完成目标80-89%", "基本完成目标", "略有不足"],
-        },
-        {
-          level: "及格（60-69分）",
-          description: "目标完成度70-79%",
-          examples: ["完成目标70-79%", "目标完成不足", "需要改进"],
-        },
-        {
-          level: "不及格（<60分）",
-          description: "目标完成度低于70%",
-          examples: ["完成目标<70%", "目标完成度差", "严重不足"],
-        },
-      ],
-    },
-    {
-      id: "department-review",
-      title: "部门互评（10%）",
-      weight: 10,
-      description: "由部门同事进行的互相评价",
-      criteria: [
-        {
-          level: "优秀（90-100分）",
-          description: "获得同事高度认可",
-          examples: ["团队合作好", "沟通能力强", "受欢迎"],
-        },
-        {
-          level: "良好（80-89分）",
-          description: "获得同事认可",
-          examples: ["团队合作较好", "沟通能力较强", "关系融洽"],
-        },
-        {
-          level: "一般（70-79分）",
-          description: "获得同事一般认可",
-          examples: ["团队合作一般", "沟通能力一般", "关系一般"],
-        },
-        {
-          level: "及格（60-69分）",
-          description: "获得同事有限认可",
-          examples: ["团队合作不足", "沟通能力不足", "有冲突"],
-        },
-        {
-          level: "不及格（<60分）",
-          description: "获得同事低评价",
-          examples: ["团队合作差", "沟通能力差", "关系紧张"],
-        },
       ],
     },
   ];
 
-  // 绩效加减分规则
-  const bonusRules = [
+  const bonusRules = bonusRulesData || [
     {
       id: "bonus",
       title: "绩效加分规则",
@@ -158,11 +98,11 @@ export default function PerformanceRules() {
       items: [
         { criteria: "获得公司表彰", points: "5-10分" },
         { criteria: "完成重点项目", points: "3-5分" },
-        { criteria: "获得客户好评", points: "2-3分" },
-        { criteria: "创新建议被采纳", points: "1-2分" },
-        { criteria: "参加培训并通过", points: "1分" },
       ],
     },
+  ];
+
+  const penaltyRules = penaltyRulesData || [
     {
       id: "penalty",
       title: "绩效减分规则",
@@ -170,21 +110,29 @@ export default function PerformanceRules() {
       items: [
         { criteria: "严重迟到缺勤", points: "-5分" },
         { criteria: "工作失误导致损失", points: "-3-5分" },
-        { criteria: "客户投诉", points: "-2-3分" },
-        { criteria: "违反公司规定", points: "-1-2分" },
-        { criteria: "安全事故", points: "-5-10分" },
       ],
     },
   ];
 
-  // 等级划分规则
-  const gradeRules = [
+  const gradeRules = gradeRulesData || [
     { grade: "优秀", range: "90-100分", percentage: "15%", benefits: "年终奖励、晋升优先" },
     { grade: "良好", range: "80-89分", percentage: "35%", benefits: "年终奖励、培训机会" },
-    { grade: "一般", range: "70-79分", percentage: "35%", benefits: "基本年终奖励" },
-    { grade: "及格", range: "60-69分", percentage: "12%", benefits: "无额外奖励" },
-    { grade: "不及格", range: "<60分", percentage: "3%", benefits: "可能面临调岗或解聘" },
   ];
+
+  const handleRuleUpdate = (ruleId: string, updatedData: any) => {
+    updateRuleMutation.mutate({
+      ruleId,
+      ...updatedData,
+    });
+  };
+
+  if (rulesLoading || bonusLoading || penaltyLoading || gradeLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
+        <div className="text-center">加载中...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
@@ -202,21 +150,52 @@ export default function PerformanceRules() {
           <Download size={18} />
           下载规则文档
         </Button>
-        <Button variant="outline" className="gap-2">
-          <Edit size={18} />
-          编辑规则
-        </Button>
-        <Button variant="outline" className="gap-2">
-          <Plus size={18} />
-          新增规则
-        </Button>
+        {canEdit && (
+          <>
+            <Button
+              variant={editMode ? "destructive" : "outline"}
+              className="gap-2"
+              onClick={() => setEditMode(!editMode)}
+            >
+              {editMode ? (
+                <>
+                  <X size={18} />
+                  取消编辑
+                </>
+              ) : (
+                <>
+                  <Edit size={18} />
+                  编辑规则
+                </>
+              )}
+            </Button>
+            <Button variant="outline" className="gap-2">
+              <Plus size={18} />
+              新增规则
+            </Button>
+          </>
+        )}
+        {!canEdit && (
+          <div className="text-sm text-slate-600 flex items-center">
+            仅 Admin 和 HR 可以编辑规则
+          </div>
+        )}
       </div>
+
+      {/* 编辑模式提示 */}
+      {editMode && canEdit && (
+        <div className="mb-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <p className="text-sm text-yellow-800">
+            ✏️ 现在处于编辑模式，您可以修改规则内容。修改后点击保存按钮确认更改。
+          </p>
+        </div>
+      )}
 
       {/* 评分维度规则 */}
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-slate-900 mb-6">评分维度规则</h2>
         <div className="grid gap-4">
-          {performanceRules.map((rule) => (
+          {performanceRules.map((rule: any) => (
             <Card key={rule.id} className="bg-white border-0 shadow-sm overflow-hidden">
               <button
                 onClick={() => toggleRule(rule.id)}
@@ -224,29 +203,84 @@ export default function PerformanceRules() {
               >
                 <div className="flex items-center gap-4 flex-1">
                   <div className="flex-1 text-left">
-                    <h3 className="text-lg font-semibold text-slate-900">{rule.title}</h3>
-                    <p className="text-sm text-slate-600 mt-1">{rule.description}</p>
+                    {editMode && editingRuleId === rule.id ? (
+                      <div className="space-y-3">
+                        <Input
+                          defaultValue={rule.title}
+                          placeholder="规则标题"
+                          className="text-lg font-semibold"
+                        />
+                        <Textarea
+                          defaultValue={rule.description}
+                          placeholder="规则描述"
+                          className="text-sm"
+                        />
+                        <div className="flex gap-2">
+                          <Input
+                            type="number"
+                            defaultValue={rule.weight}
+                            placeholder="权重 (%)"
+                            className="w-24"
+                          />
+                          <Button
+                            size="sm"
+                            className="gap-2"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRuleUpdate(rule.id, {
+                                title: rule.title,
+                                weight: rule.weight,
+                                description: rule.description,
+                              });
+                              setEditingRuleId(null);
+                            }}
+                          >
+                            <Save size={16} />
+                            保存
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingRuleId(null);
+                            }}
+                          >
+                            <X size={16} />
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <h3 className="text-lg font-semibold text-slate-900">{rule.title}</h3>
+                        <p className="text-sm text-slate-600 mt-1">{rule.description}</p>
+                      </>
+                    )}
                   </div>
                   <Badge variant="secondary" className="ml-4">
                     权重：{rule.weight}%
                   </Badge>
                 </div>
-                {expandedRules.includes(rule.id) ? (
-                  <ChevronUp size={20} className="text-slate-600" />
-                ) : (
-                  <ChevronDown size={20} className="text-slate-600" />
+                {!editMode && (
+                  <>
+                    {expandedRules.includes(rule.id) ? (
+                      <ChevronUp size={20} className="text-slate-600" />
+                    ) : (
+                      <ChevronDown size={20} className="text-slate-600" />
+                    )}
+                  </>
                 )}
               </button>
 
-              {expandedRules.includes(rule.id) && (
+              {expandedRules.includes(rule.id) && !editMode && (
                 <div className="px-6 py-4 border-t border-slate-200 bg-slate-50">
                   <div className="space-y-4">
-                    {rule.criteria.map((criterion, idx) => (
+                    {rule.criteria?.map((criterion: any, idx: number) => (
                       <div key={idx} className="bg-white p-4 rounded-lg">
                         <h4 className="font-semibold text-slate-900 mb-2">{criterion.level}</h4>
                         <p className="text-sm text-slate-600 mb-2">{criterion.description}</p>
                         <div className="flex flex-wrap gap-2">
-                          {criterion.examples.map((example, exIdx) => (
+                          {criterion.examples?.map((example: string, exIdx: number) => (
                             <Badge key={exIdx} variant="outline" className="text-xs">
                               {example}
                             </Badge>
@@ -266,33 +300,35 @@ export default function PerformanceRules() {
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-slate-900 mb-6">加减分规则</h2>
         <div className="grid md:grid-cols-2 gap-6">
-          {bonusRules.map((bonusRule) => (
-            <Card key={bonusRule.id} className="bg-white border-0 shadow-sm p-6">
-              <h3
-                className={`text-lg font-semibold mb-4 ${
-                  bonusRule.type === "bonus" ? "text-green-900" : "text-red-900"
-                }`}
-              >
-                {bonusRule.title}
-              </h3>
-              <div className="space-y-3">
-                {bonusRule.items.map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
-                  >
-                    <span className="text-sm text-slate-700">{item.criteria}</span>
-                    <Badge
-                      variant={bonusRule.type === "bonus" ? "default" : "destructive"}
-                      className="ml-2"
-                    >
-                      {item.points}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          ))}
+          {/* 加分规则 */}
+          <Card className="bg-white border-0 shadow-sm p-6">
+            <h3 className="text-lg font-semibold mb-4 text-green-900">绩效加分规则</h3>
+            <div className="space-y-3">
+              {bonusRules[0]?.items?.map((item: any, idx: number) => (
+                <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                  <span className="text-sm text-slate-700">{item.criteria}</span>
+                  <Badge variant="default" className="ml-2">
+                    {item.points}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          {/* 减分规则 */}
+          <Card className="bg-white border-0 shadow-sm p-6">
+            <h3 className="text-lg font-semibold mb-4 text-red-900">绩效减分规则</h3>
+            <div className="space-y-3">
+              {penaltyRules[0]?.items?.map((item: any, idx: number) => (
+                <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                  <span className="text-sm text-slate-700">{item.criteria}</span>
+                  <Badge variant="destructive" className="ml-2">
+                    {item.points}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </Card>
         </div>
       </div>
 
@@ -319,7 +355,7 @@ export default function PerformanceRules() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {gradeRules.map((rule, idx) => (
+                {gradeRules.map((rule: any, idx: number) => (
                   <tr key={idx} className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4">
                       <Badge
@@ -353,6 +389,7 @@ export default function PerformanceRules() {
           <li>• 加减分规则可根据实际情况灵活应用，最终分数不超过100分</li>
           <li>• 等级划分比例为参考值，具体比例由公司根据实际情况调整</li>
           <li>• 所有绩效评分规则由人力资源部门负责解释和更新</li>
+          {canEdit && <li>• 您有权限编辑这些规则，请谨慎操作</li>}
         </ul>
       </div>
     </div>

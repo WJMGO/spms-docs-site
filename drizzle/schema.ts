@@ -944,3 +944,211 @@ export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
 }));
 
 
+
+// ==================== 绩效规则管理表 ====================
+
+/**
+ * 绩效评分维度规则表
+ * 存储绩效评分的各个维度规则（如日常工作、工作质量等）
+ */
+export const performanceRules = mysqlTable(
+  'performance_rules',
+  {
+    id: varchar('id', { length: 36 }).primaryKey(),
+    title: varchar('title', { length: 255 }).notNull(), // 如"日常工作表现"
+    weight: int('weight').notNull(), // 权重百分比
+    description: text('description'), // 规则描述
+    isActive: boolean('is_active').default(true),
+    createdBy: varchar('created_by', { length: 36 }).notNull(),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedBy: varchar('updated_by', { length: 36 }),
+    updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+  },
+  (table) => ({
+    createdByIdx: index('idx_performance_rules_created_by').on(table.createdBy),
+    isActiveIdx: index('idx_performance_rules_is_active').on(table.isActive),
+  })
+);
+
+/**
+ * 绩效评分等级标准表
+ * 存储每个维度的评分等级标准（优秀、良好、一般等）
+ */
+export const performanceRuleCriteria = mysqlTable(
+  'performance_rule_criteria',
+  {
+    id: varchar('id', { length: 36 }).primaryKey(),
+    ruleId: varchar('rule_id', { length: 36 }).notNull(),
+    level: varchar('level', { length: 100 }).notNull(), // 如"优秀（90-100分）"
+    scoreRange: varchar('score_range', { length: 50 }).notNull(), // 如"90-100"
+    description: text('description').notNull(), // 等级描述
+    examples: json('examples').$type<string[]>(), // 示例数组
+    sortOrder: int('sort_order').default(0), // 排序顺序
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+  },
+  (table) => ({
+    ruleIdIdx: index('idx_performance_rule_criteria_rule_id').on(table.ruleId),
+    fk_rule: foreignKey({
+      columns: [table.ruleId],
+      foreignColumns: [performanceRules.id],
+    }).onDelete('cascade'),
+  })
+);
+
+/**
+ * 绩效加分规则表
+ * 存储绩效加分的各种情况和对应的加分值
+ */
+export const performanceBonusRules = mysqlTable(
+  'performance_bonus_rules',
+  {
+    id: varchar('id', { length: 36 }).primaryKey(),
+    criteria: varchar('criteria', { length: 255 }).notNull(), // 加分条件，如"获得公司表彰"
+    minPoints: int('min_points').notNull(), // 最小加分
+    maxPoints: int('max_points').notNull(), // 最大加分
+    description: text('description'), // 详细说明
+    isActive: boolean('is_active').default(true),
+    sortOrder: int('sort_order').default(0),
+    createdBy: varchar('created_by', { length: 36 }).notNull(),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedBy: varchar('updated_by', { length: 36 }),
+    updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+  },
+  (table) => ({
+    isActiveIdx: index('idx_performance_bonus_rules_is_active').on(table.isActive),
+    createdByIdx: index('idx_performance_bonus_rules_created_by').on(table.createdBy),
+  })
+);
+
+/**
+ * 绩效减分规则表
+ * 存储绩效减分的各种情况和对应的减分值
+ */
+export const performancePenaltyRules = mysqlTable(
+  'performance_penalty_rules',
+  {
+    id: varchar('id', { length: 36 }).primaryKey(),
+    criteria: varchar('criteria', { length: 255 }).notNull(), // 减分条件，如"严重迟到缺勤"
+    minPoints: int('min_points').notNull(), // 最小减分（负数）
+    maxPoints: int('max_points').notNull(), // 最大减分（负数）
+    description: text('description'), // 详细说明
+    isActive: boolean('is_active').default(true),
+    sortOrder: int('sort_order').default(0),
+    createdBy: varchar('created_by', { length: 36 }).notNull(),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedBy: varchar('updated_by', { length: 36 }),
+    updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+  },
+  (table) => ({
+    isActiveIdx: index('idx_performance_penalty_rules_is_active').on(table.isActive),
+    createdByIdx: index('idx_performance_penalty_rules_created_by').on(table.createdBy),
+  })
+);
+
+/**
+ * 绩效等级划分规则表
+ * 存储绩效等级的分数范围、占比和对应待遇
+ */
+export const performanceGradeRules = mysqlTable(
+  'performance_grade_rules',
+  {
+    id: varchar('id', { length: 36 }).primaryKey(),
+    grade: varchar('grade', { length: 50 }).notNull(), // 等级名称，如"优秀"
+    minScore: decimal('min_score', { precision: 5, scale: 2 }).notNull(), // 最低分数
+    maxScore: decimal('max_score', { precision: 5, scale: 2 }).notNull(), // 最高分数
+    percentage: decimal('percentage', { precision: 5, scale: 2 }), // 占比百分比
+    benefits: text('benefits'), // 对应待遇
+    description: text('description'), // 等级描述
+    sortOrder: int('sort_order').default(0),
+    createdBy: varchar('created_by', { length: 36 }).notNull(),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedBy: varchar('updated_by', { length: 36 }),
+    updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+  },
+  (table) => ({
+    createdByIdx: index('idx_performance_grade_rules_created_by').on(table.createdBy),
+  })
+);
+
+/**
+ * 绩效规则版本记录表
+ * 记录规则的历史版本，支持回滚功能
+ */
+export const performanceRuleVersions = mysqlTable(
+  'performance_rule_versions',
+  {
+    id: varchar('id', { length: 36 }).primaryKey(),
+    ruleType: varchar('rule_type', { length: 50 }).notNull(), // 规则类型：dimension, bonus, penalty, grade
+    versionNumber: int('version_number').notNull(),
+    content: json('content').notNull(), // 规则内容的 JSON 快照
+    changeDescription: text('change_description'), // 变更说明
+    createdBy: varchar('created_by', { length: 36 }).notNull(),
+    createdAt: timestamp('created_at').defaultNow(),
+  },
+  (table) => ({
+    ruleTypeIdx: index('idx_performance_rule_versions_rule_type').on(table.ruleType),
+    createdByIdx: index('idx_performance_rule_versions_created_by').on(table.createdBy),
+  })
+);
+
+// ==================== 绩效规则关系定义 ====================
+
+export const performanceRulesRelations = relations(performanceRules, ({ one, many }) => ({
+  creator: one(users, {
+    fields: [performanceRules.createdBy],
+    references: [users.id],
+  }),
+  updater: one(users, {
+    fields: [performanceRules.updatedBy],
+    references: [users.id],
+  }),
+  criteria: many(performanceRuleCriteria),
+}));
+
+export const performanceRuleCriteriaRelations = relations(performanceRuleCriteria, ({ one }) => ({
+  rule: one(performanceRules, {
+    fields: [performanceRuleCriteria.ruleId],
+    references: [performanceRules.id],
+  }),
+}));
+
+export const performanceBonusRulesRelations = relations(performanceBonusRules, ({ one }) => ({
+  creator: one(users, {
+    fields: [performanceBonusRules.createdBy],
+    references: [users.id],
+  }),
+  updater: one(users, {
+    fields: [performanceBonusRules.updatedBy],
+    references: [users.id],
+  }),
+}));
+
+export const performancePenaltyRulesRelations = relations(performancePenaltyRules, ({ one }) => ({
+  creator: one(users, {
+    fields: [performancePenaltyRules.createdBy],
+    references: [users.id],
+  }),
+  updater: one(users, {
+    fields: [performancePenaltyRules.updatedBy],
+    references: [users.id],
+  }),
+}));
+
+export const performanceGradeRulesRelations = relations(performanceGradeRules, ({ one }) => ({
+  creator: one(users, {
+    fields: [performanceGradeRules.createdBy],
+    references: [users.id],
+  }),
+  updater: one(users, {
+    fields: [performanceGradeRules.updatedBy],
+    references: [users.id],
+  }),
+}));
+
+export const performanceRuleVersionsRelations = relations(performanceRuleVersions, ({ one }) => ({
+  creator: one(users, {
+    fields: [performanceRuleVersions.createdBy],
+    references: [users.id],
+  }),
+}));
