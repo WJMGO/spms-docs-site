@@ -73,7 +73,7 @@ export default function Dashboard() {
   const navigationItems = [
     { id: "overview", label: "绩效汇总", icon: "📊", path: "/" },
     { id: "monthly", label: "月度绩效评定工作台", icon: "📋", path: "/monthly-workbench" },
-    { id: "rules", label: "绩效频则", icon: "⚙️", path: "/performance-rules" },
+    { id: "rules", label: "绩效规则", icon: "⚙️", path: "/performance-rules" },
   ];
 
   const topNavItems = [
