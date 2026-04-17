@@ -97,8 +97,8 @@ export default function Dashboard() {
           <div className="flex items-center gap-8">
             {/* 品牌标题 */}
             <div className="flex items-center gap-2">
-              <div className="text-2xl font-bold text-blue-900">Architectural Ledger</div>
-              <div className="text-xs text-slate-500 font-medium">ENTERPRISE PERFORMANCE</div>
+              <div className="text-2xl font-bold text-blue-900">系统软件绩效管理系统</div>
+              <div className="text-xs text-slate-500 font-medium">SPMS</div>
             </div>
 
             {/* 横向导航条目 */}
