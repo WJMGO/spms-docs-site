@@ -8,156 +8,188 @@
   --font-body: 'Inter', sans-serif;
 }
 
-@layer base {
-  html {
-    @apply scroll-smooth;
-  }
+html {
+  scroll-behavior: smooth;
+}
 
-  body {
-    @apply bg-white text-gray-900 font-body;
-    font-family: var(--font-body);
-  }
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: white;
+  color: rgb(17, 24, 39);
+}
 
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-headline font-bold;
-  }
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Manrope', sans-serif;
+  font-weight: bold;
+}
 
-  h1 {
-    @apply text-4xl;
-  }
+h1 {
+  font-size: 2.25rem;
+}
 
-  h2 {
-    @apply text-3xl;
-  }
+h2 {
+  font-size: 1.875rem;
+}
 
-  h3 {
-    @apply text-2xl font-semibold;
-  }
+h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
 
-  h4 {
-    @apply text-xl font-semibold;
-  }
+h4 {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
 
-  h5 {
-    @apply text-lg font-semibold;
-  }
+h5 {
+  font-size: 1.125rem;
+  font-weight: 600;
+}
 
-  h6 {
-    @apply text-base font-semibold;
-  }
+h6 {
+  font-size: 1rem;
+  font-weight: 600;
+}
 
-  button:not(:disabled),
-  [role="button"]:not([aria-disabled="true"]),
-  [type="button"]:not(:disabled),
-  [type="submit"]:not(:disabled),
-  [type="reset"]:not(:disabled),
-  a[href],
-  select:not(:disabled),
-  input[type="checkbox"]:not(:disabled),
-  input[type="radio"]:not(:disabled) {
-    @apply cursor-pointer;
-  }
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+[type="button"]:not(:disabled),
+[type="submit"]:not(:disabled),
+[type="reset"]:not(:disabled),
+a[href],
+select:not(:disabled),
+input[type="checkbox"]:not(:disabled),
+input[type="radio"]:not(:disabled) {
+  cursor: pointer;
+}
 
-  input, textarea, select {
-    @apply font-body;
+input, textarea, select {
+  font-family: 'Inter', sans-serif;
+}
+
+/* Container utility */
+.container {
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.flex {
+  min-height: 0;
+  min-width: 0;
+}
+
+@media (min-width: 640px) {
+  .container {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
   }
 }
 
-@layer components {
-  /* Container utility */
+@media (min-width: 1024px) {
   .container {
-    width: 100%;
-    margin-left: auto;
-    margin-right: auto;
-    padding-left: 1rem;
-    padding-right: 1rem;
+    padding-left: 2rem;
+    padding-right: 2rem;
+    max-width: 1280px;
   }
+}
 
-  .flex {
-    min-height: 0;
-    min-width: 0;
-  }
+/* Custom scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
 
-  @media (min-width: 640px) {
-    .container {
-      padding-left: 1.5rem;
-      padding-right: 1.5rem;
-    }
-  }
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
 
-  @media (min-width: 1024px) {
-    .container {
-      padding-left: 2rem;
-      padding-right: 2rem;
-      max-width: 1280px;
-    }
-  }
-
-  /* Custom scrollbar */
-  .custom-scrollbar::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-
-  .custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #d1d5db;
-    border-radius: 10px;
-  }
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 10px;
 }
 
 /* Prose styling for documentation */
 .prose {
-  @apply text-gray-900;
+  color: rgb(17, 24, 39);
 }
 
 .prose h1 {
-  @apply text-3xl font-bold mb-6;
+  font-size: 1.875rem;
+  font-weight: bold;
+  margin-bottom: 1.5rem;
 }
 
 .prose h2 {
-  @apply text-2xl font-bold mt-8 mb-4;
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
 }
 
 .prose h3 {
-  @apply text-xl font-semibold mt-6 mb-3;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
 }
 
 .prose p {
-  @apply mb-4 leading-relaxed;
+  margin-bottom: 1rem;
+  line-height: 1.625;
 }
 
 .prose ul, .prose ol {
-  @apply mb-4 ml-6;
+  margin-bottom: 1rem;
+  margin-left: 1.5rem;
 }
 
 .prose li {
-  @apply mb-2;
+  margin-bottom: 0.5rem;
 }
 
 .prose table {
-  @apply w-full border-collapse my-6;
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
 }
 
 .prose th {
-  @apply bg-gray-100 font-semibold p-3 text-left border border-gray-300;
+  background-color: rgb(243, 244, 246);
+  font-weight: 600;
+  padding: 0.75rem;
+  text-align: left;
+  border: 1px solid rgb(209, 213, 219);
 }
 
 .prose td {
-  @apply p-3 border border-gray-300;
+  padding: 0.75rem;
+  border: 1px solid rgb(209, 213, 219);
 }
 
 .prose code {
-  @apply bg-gray-100 px-2 py-1 rounded font-mono text-sm;
+  background-color: rgb(243, 244, 246);
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-family: 'Courier New', monospace;
+  font-size: 0.875rem;
 }
 
 .prose blockquote {
-  @apply border-l-4 border-blue-600 pl-4 py-2 my-4 bg-gray-50 italic;
+  border-left: 4px solid rgb(37, 99, 235);
+  padding-left: 1rem;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  margin: 1rem 0;
+  background-color: rgb(249, 250, 251);
+  font-style: italic;
 }
 
 .prose mark {
-  @apply bg-yellow-200 text-yellow-900 px-1 rounded;
+  background-color: rgb(253, 224, 71);
+  color: rgb(120, 53, 15);
+  padding: 0.25rem;
+  border-radius: 0.125rem;
 }
