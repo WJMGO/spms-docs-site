@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useRoute } from 'wouter';
+import { useRoute, useLocation } from 'wouter';
 import { ArrowLeft, Download, MessageSquare, TrendingUp } from 'lucide-react';
 import PerformanceLayout from '@/components/PerformanceLayout';
 
@@ -84,6 +84,7 @@ const mockFeedback: Feedback[] = [
 ];
 
 function EmployeePerformanceDetailContent() {
+  const [, setLocation] = useLocation();
   const [, params] = useRoute('/employee/:id');
   const employeeId = params?.id || '1';
 
@@ -101,7 +102,10 @@ function EmployeePerformanceDetailContent() {
       <div className="bg-white border-b border-gray-200">
         <div className="px-8 py-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <button className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+            <button
+              onClick={() => setLocation('/monthly-workbench')}
+              className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+            >
               <ArrowLeft size={20} className="text-slate-600" />
             </button>
             <div>
