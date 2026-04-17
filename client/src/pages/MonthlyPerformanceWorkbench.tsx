@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight, Download, Filter, ChevronDown } from 'lucide-react';
+import PerformanceLayout from '@/components/PerformanceLayout';
 
 interface EmployeePerformance {
   rank: number;
@@ -83,13 +84,13 @@ const mockEmployees: EmployeePerformance[] = [
   },
 ];
 
-export default function MonthlyPerformanceWorkbench() {
+function MonthlyPerformanceWorkbenchContent() {
   const [currentPage, setCurrentPage] = useState(1);
   const totalEmployees = 1248;
   const itemsPerPage = 5;
 
   return (
-    <div className="min-h-screen bg-surface">
+    <div className="bg-surface">
       {/* Page Header */}
       <div className="bg-white border-b border-gray-200 px-8 py-8">
         <h1 className="text-3xl font-bold text-on-surface mb-2" style={{ fontFamily: 'Manrope, sans-serif' }}>
@@ -265,5 +266,13 @@ export default function MonthlyPerformanceWorkbench() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function MonthlyPerformanceWorkbench() {
+  return (
+    <PerformanceLayout activeNav="monthly-workbench">
+      <MonthlyPerformanceWorkbenchContent />
+    </PerformanceLayout>
   );
 }

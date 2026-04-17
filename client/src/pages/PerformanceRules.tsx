@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronUp, Edit2 } from 'lucide-react';
+import PerformanceLayout from '@/components/PerformanceLayout';
 
 interface PerformanceRule {
   id: string;
@@ -95,7 +96,7 @@ const mockGradeRules: GradeRule[] = [
   { grade: 'D', minScore: 0, maxScore: 64, level: '不及格' },
 ];
 
-export default function PerformanceRules() {
+function PerformanceRulesContent() {
   const [expandedRules, setExpandedRules] = useState<Set<string>>(new Set(['1']));
   const [rules] = useState<PerformanceRule[]>(mockRules);
   const [bonusRules] = useState<BonusRule[]>(mockBonusRules);
@@ -113,7 +114,7 @@ export default function PerformanceRules() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="bg-slate-50">
       {/* Page Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-6">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">绩效规则管理</h1>
@@ -332,5 +333,13 @@ export default function PerformanceRules() {
         </section>
       </div>
     </div>
+  );
+}
+
+export default function PerformanceRules() {
+  return (
+    <PerformanceLayout activeNav="rules">
+      <PerformanceRulesContent />
+    </PerformanceLayout>
   );
 }
