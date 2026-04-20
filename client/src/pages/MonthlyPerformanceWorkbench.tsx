@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
 import { useLocation } from 'wouter';
-import { ChevronLeft, ChevronRight, Download, Filter, ChevronDown, Search, ArrowUpDown } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download, Filter, ChevronDown, Search, ArrowUpDown, Upload } from 'lucide-react';
 import PerformanceLayout from '@/components/PerformanceLayout';
+import DocumentUploader from '@/components/DocumentUploader';
 
 interface EmployeePerformance {
   rank: number;
@@ -133,10 +134,11 @@ function MonthlyPerformanceWorkbenchContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState<string>('');
   const [scoreRange, setScoreRange] = useState<{ min: number; max: number }>({ min: 0, max: 100 });
-  const [sortField, setSortField] = useState<SortField>(null);
-  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
+  const [sortField, setSortField] = useState<string | null>(null);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [showFilterPanel, setShowFilterPanel] = useState(false);
-
+  const [showUploader, setShowUploader] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const totalEmployees = 1248;
   const itemsPerPage = 5;
 
@@ -269,6 +271,15 @@ function MonthlyPerformanceWorkbenchContent() {
             >
               <Filter size={18} className="text-slate-600" />
               <span className="text-slate-600 font-medium">筛选</span>
+            </button>
+
+            {/* Upload Button */}
+            <button
+              onClick={() => setShowUploader(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            >
+              <Upload size={18} />
+              <span>上传文档</span>
             </button>
 
             {/* Download Button */}
@@ -495,6 +506,30 @@ function MonthlyPerformanceWorkbenchContent() {
           </div>
         </div>
       </div>
+
+      {/* Document Uploader Modal */}
+      {showUploader && (
+        <DocumentUploader
+          onUpload={async (files) => {
+            setIsUploading(true);
+            try {
+              // TODO: 调用后端 API 上传和解析文档
+              console.log('上传文件:', files);
+              // 模拟上传延迟
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              alert(`成功上传 ${files.length} 个文件`);
+              setShowUploader(false);
+            } catch (error) {
+              console.error('上传失败:', error);
+              alert('上传失败，请重试');
+            } finally {
+              setIsUploading(false);
+            }
+          }}
+          onClose={() => setShowUploader(false)}
+          isLoading={isUploading}
+        />
+      )}
     </div>
   );
 }
