@@ -29,9 +29,50 @@ export interface ParsedDocumentData {
   evaluatorName?: string;
   evaluationDate?: string;
 
+  // 工作质量详情数据
+  workQualityDetails?: WorkQualityDetails;
+
   // 其他信息
   rawText?: string; // 原始提取的文本内容
   extractionConfidence?: number; // 提取置信度 0-1
+}
+
+/**
+ * 工作质量详情数据
+ */
+export interface WorkQualityDetails {
+  // 代码走查
+  codeReviewCount?: number;
+  codeReviewScore?: number;
+  codeReviewMissing?: boolean;
+
+  // 代码审核
+  codeAuditCount?: number;
+  codeAuditScore?: number;
+  codeAuditMissing?: boolean;
+
+  // Bug 打回率
+  bugReturnRate?: number;
+  bugReturnRateScore?: number;
+  bugReturnRateMissing?: boolean;
+
+  // 个人 Bug 有效打回
+  personalBugCount?: number;
+  personalBugScore?: number;
+  personalBugMissing?: boolean;
+
+  // 超期问题部门达成
+  overdueProblemsAchieved?: boolean;
+  overdueProblemsScore?: number;
+  overdueProblemsMissing?: boolean;
+
+  // 设计评审
+  designReviewCount?: number;
+  designReviewScore?: number;
+  designReviewMissing?: boolean;
+
+  // 总分
+  totalScore?: number;
 }
 
 /**
