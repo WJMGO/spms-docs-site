@@ -3,6 +3,8 @@ import { useLocation } from 'wouter';
 import { ChevronLeft, ChevronRight, Download, Filter, ChevronDown, Search, ArrowUpDown, Upload } from 'lucide-react';
 import PerformanceLayout from '@/components/PerformanceLayout';
 import DocumentUploader from '@/components/DocumentUploader';
+import { trpc } from '@/trpc';
+import { toast } from 'sonner';
 
 interface EmployeePerformance {
   rank: number;
@@ -513,15 +515,50 @@ function MonthlyPerformanceWorkbenchContent() {
           onUpload={async (files) => {
             setIsUploading(true);
             try {
-              // TODO: 调用后端 API 上传和解析文档
-              console.log('上传文件:', files);
-              // 模拟上传延迟
-              await new Promise(resolve => setTimeout(resolve, 2000));
-              alert(`成功上传 ${files.length} 个文件`);
-              setShowUploader(false);
+              // 将文件转换为 Base64
+              const filePromises = files.map(file => {
+                return new Promise<{ fileName: string; fileContent: string; mimeType: string }>((resolve, reject) => {
+                  const reader = new FileReader();
+                  reader.onload = () => {
+                    const base64 = (reader.result as string).split(',')[1];
+                    resolve({
+                      fileName: file.name,
+                      fileContent: base64,
+                      mimeType: file.type,
+                    });
+                  };
+                  reader.onerror = reject;
+                  reader.readAsDataURL(file);
+                });
+              });
+
+              const fileData = await Promise.all(filePromises);
+
+              // 批量解析文档
+              const parseBatchMutation = trpc.documentParser.parseBatchDocuments.useMutation();
+              const result = await new Promise((resolve, reject) => {
+                parseBatchMutation.mutate(
+                  { documents: fileData },
+                  {
+                    onSuccess: (data) => resolve(data),
+                    onError: (error) => reject(error),
+                  }
+                );
+              });
+
+              const data = result as any;
+              if (data.success) {
+                toast.success(`成功解析 ${data.successCount} 个文件`);
+                if (data.failureCount > 0) {
+                  toast.error(`${data.failureCount} 个文件解析失败`);
+                }
+                setShowUploader(false);
+              } else {
+                toast.error('文档解析失败，请重试');
+              }
             } catch (error) {
               console.error('上传失败:', error);
-              alert('上传失败，请重试');
+              toast.error('上传失败，请重试');
             } finally {
               setIsUploading(false);
             }

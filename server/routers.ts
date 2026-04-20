@@ -10,6 +10,7 @@ import { auditRouter } from './routers/audit';
 import { employeeRouter } from './routers/employees';
 import { registrationRouter } from './routers/registration';
 import { performanceRulesRouter } from './routers/performance-rules';
+import { documentParserRouter } from './routers/document-parser';
 import { z } from 'zod';
 import { getDb, users, employees, departments, positions } from './db';
 import { eq } from 'drizzle-orm';
@@ -339,6 +340,7 @@ export const appRouter = router({
   performance: performanceRouter,
   performanceDimensions: performanceDimensionsRouter,
   performanceRules: performanceRulesRouter,
+  documentParser: documentParserRouter,
   analytics: analyticsRouter,
   management: managementRouter,
   audit: auditRouter,
